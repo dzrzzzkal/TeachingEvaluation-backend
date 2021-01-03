@@ -13,14 +13,16 @@ const staticCache = require('koa-static-cache')
 const session = require('koa-session-minimal')
 const MysqlStore = require('koa-mysql-session')
 const cors = require('koa2-cors')
+require('module-alias/register')
 
-const config = require('./config/default')
+
+const config = require('./config/config')
+const localFilter = require('./middlewares/localFilter')
 
 const index = require('./routes/index')
 const users = require('./routes/users')
 const admin = require('./routes/admin')
-const adminLogin = require('./routes/admin/account/login')
-const adminLogout = require('./routes/admin/account/logout')
+const adminAccount = require('./routes/admin/account')
 const register = require('./routes/admin/account/register')
 
 // error handler
@@ -101,13 +103,55 @@ app.use(session({
 
 // 配置koa2-cors中间件，跨域
 // 待详细配置，参考一下别人的：https://segmentfault.com/q/1010000019446949
-app.use(cors())
-
+// https://blog.csdn.net/qq_34995576/article/details/85005668?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3.control&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3.control
+app.use(cors({
+  origin: function (ctx) {
+    if (ctx.url === '/login') {
+      return "*"; // 允许来自所有域名请求
+    }
+    return 'http://localhost:8080';
+  },
+  exposeHeaders: ['WWW-Authenticate', 'Server-Authorization'],
+  maxAge: 5,
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'DELETE'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
+}))
 
 // 写一个中间件配置公共的信息
+// app.use(async (ctx, next) => {
+//   ctx.state.userInfo = 'aaa'
+//   await next()  // 继续向下匹配路由
+// })
+
+// token拦截，验证
+/**
+ * 根据localFilter有两种，
+ * 第一种是token过期，只要有token(前台logout才会删除token)，直接更新token，无token的话就导向'/json'，
+ * 第二种是token过期的话，都不能获取，要重新登录获取token（目前只有前台有登录功能）
+ * 目前采用的是第一种，第二种不能删！！！
+ */
 app.use(async (ctx, next) => {
-  ctx.state.userInfo = 'aaa'
-  await next()  // 继续向下匹配路由
+  /**
+   * res: token有效时返回'token valid'，
+   * 过期时返回refreshToken(包括更新checkToken()结果，添加addToken()结果)，
+   * 无token时直接return
+   */
+  // 以下的代码包括localFIlter()全都写的好丑陋。。。好sb的逻辑TAT
+  let res = await localFilter(ctx)
+  ctx = res
+  // console.log('ctx.response.body:')
+  // console.log(ctx.response.body)
+  console.log('ctx:')
+  console.log(ctx)
+  await next()
+  // console.log('next ctx:')
+  // console.log(ctx.response.body)
+  /**
+   * 第二种 ！！！不能删！！！！
+   */
+  // await localFilter(ctx)
+  // await next()
 })
 
 // 404中间件（貌似可删）
@@ -136,8 +180,7 @@ app.use(async (ctx, next) => {
 app.use(index.routes(), index.allowedMethods())
 app.use(users.routes(), users.allowedMethods())
 app.use(admin.routes(), admin.allowedMethods())
-app.use(adminLogin.routes(), adminLogin.allowedMethods())
-// app.use(adminLogout.routes(), adminLogout.allowedMethods())
+app.use(adminAccount.routes(), adminAccount.allowedMethods())
 app.use(register.routes(), register.allowedMethods())
 
 // error-handling

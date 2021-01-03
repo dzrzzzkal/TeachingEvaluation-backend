@@ -1,8 +1,8 @@
 const router = require('koa-router')()
 const userModel = require('../../../controller/mysql')
 const md5 = require('md5')
-const checkNotLogin = require('../../../middlewares/check').checkNotLogin
-const checkLogin = require('../../../middlewares/check').checkLogin
+const checkNotLogin = require('../../../middlewares/checkToken').checkNotLogin
+const checkLogin = require('../../../middlewares/checkToken').checkLogin
 const moment = require('moment')
 // const fs = require('fs')
 

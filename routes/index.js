@@ -21,7 +21,8 @@ router.get('/', async (ctx, next) => {
   })
 
   // 获取session
-  console.log(ctx.session.user);
+  // console.log('session:)
+  // console.log(ctx.session.user);
 
   let list = {
     name: '张三'
