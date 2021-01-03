@@ -130,6 +130,16 @@ app.use(cors({
  * 第一种是token过期，只要有token(前台logout才会删除token)，直接更新token，无token的话就导向'/json'，
  * 第二种是token过期的话，都不能获取，要重新登录获取token（目前只有前台有登录功能）
  * 目前采用的是第一种，第二种不能删！！！
+ * 
+ * ————————————更新：
+ * 发现问题，
+ * 重复了，前端每次都要先对后端进行一次请求，判断token是否过期，
+ * 而只要有路由请求，后端每次都会在这里先拦截，判断token是否过期，因此有时前后台都进行判断，影响性能。
+ * -----但是暂时先保持这样，后面再看对哪个改进↑-----
+ * （目前前端：会有auth的判断，然后看有无token，需要auth且有token则每次发送请求前会请求'/checkToken'这个URL，否则前端要先登录。
+ * 目前后端：目前'/checkToken'中，思路和下面这个拦截器一模一样，因此采用的也是第一种，
+ * 如果想改成第二种，可以修改 'localFilter.js'
+ * 而即使目前此拦截器和'/checkToken'都会触发localFilter()，但是只会返回一个新的token，因为还没过期）
  */
 app.use(async (ctx, next) => {
   /**
@@ -138,15 +148,12 @@ app.use(async (ctx, next) => {
    * 无token时直接return
    */
   // 以下的代码包括localFIlter()全都写的好丑陋。。。好sb的逻辑TAT
+  console.log('-----this is a token拦截中间件：')
   let res = await localFilter(ctx)
   ctx = res
-  // console.log('ctx.response.body:')
-  // console.log(ctx.response.body)
-  console.log('ctx:')
-  console.log(ctx)
+  console.log('拦截后的ctx.response.body:')
+  console.log(ctx.response.body)
   await next()
-  // console.log('next ctx:')
-  // console.log(ctx.response.body)
   /**
    * 第二种 ！！！不能删！！！！
    */

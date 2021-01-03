@@ -6,6 +6,7 @@ const md5 = require('md5')
 const { userCreate, usernameQuery, userQuery } = require('@/controller/user')
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
+const localFilter = require('../../middlewares/localFilter')
 
 // 目前登录注册主要参考网址：
 // https://blog.csdn.net/where_slr/article/details/100580730
@@ -47,7 +48,7 @@ router.post('/register', async (ctx, next) => {
 })
 
 // 登录
-router.post('/login', async (ctx, next) => {
+router.post('/dologin', async (ctx, next) => {
   let loginUser = ctx.request.body
   let query = await userQuery(loginUser)
   if(!query) {  // 数据库中没有匹配到用户
@@ -85,22 +86,15 @@ router.post('/login', async (ctx, next) => {
  * 另外一种就是当检测到请求失效时，网站自动去请求新的token，第二种方式在app保持登陆状态上面用得比较多。
  * 到时候要区分小程序和网页端进行处理TAT
  */
-router.post('/test', async (ctx, next) => {
-  // let checkResult = await checkToken(ctx)
-  // let user = result.user
-  // let id = result.id
-  // let token = addToken({
-  //   user: user,
-  //   id: id
-  // })
-  // ↓可以考虑封装一个方法
-  // let {id, user,...result} = checkResult
-  // console.log('result:' + result)
-  // ctx.body = {
-  //   result,
-  //   token,
-  // }
-  ctx.body = 'test result'
+router.post('/checkToken', async (ctx, next) => {
+  console.log('-----this is checkToken URL: ')
+  // ↓返回的是一个请求，只是根据不同情况可能修改了里面的ctx.response.body
+  let returnCtx = await localFilter(ctx)
+  ctx.body = returnCtx.response.body
+})
+
+router.get('/test', async (ctx, next) =>{
+  ctx.body = {status: true}
 })
 
 // 测试 。响应时间好久

@@ -13,8 +13,9 @@ const proving = require('@/token/proving')
 // let isRefreshing = true
 const checkToken = (ctx) => {
   let token = ctx.request.header.authorization
-  console.log('request: ')
-  console.log(ctx.request)
+  console.log('---checkToken-ctx.request: ')
+  console.log('ctx.request.method: ' + ctx.request.method)
+  console.log('ctx.request.url: ' + ctx.request.url)
   if(token) {
     let res = proving(token)
     let { id, user, time, timeout } = res
