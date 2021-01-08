@@ -11,6 +11,7 @@
   "dependencies": {
     "art-template": "^4.13.2",
     "axios": "^0.21.1",
+    "crypto-js": "^4.0.0",
     "debug": "^4.1.1",
     "jsonwebtoken": "^8.5.1",
     "koa": "^2.7.0",
@@ -42,5 +43,7 @@
   "_moduleAliases": {
     "@": "."
   },
-  "_moduleDirectories": ["node_modules_custom"]
+  "_moduleDirectories": [
+    "node_modules_custom"
+  ]
 }

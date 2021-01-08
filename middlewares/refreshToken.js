@@ -14,7 +14,7 @@ const addToken = require('@/token/addToken')
  * 使用方法：
  * let checkResult = await checkToken(ctx) //外部函数先调用checkToken()
  * let refreshResult = await refreshToken(checkResult)
- * vue管理那里增加了响应拦截，if(res.data.token)的话会自动存入token
+ * vue管理那里增加了响应拦截，返回值有token的话会自动存入token
  */
 const refreshToken = async (result) => { // res：checkToken()的返回值
   let { tokenCode, id, user } = result

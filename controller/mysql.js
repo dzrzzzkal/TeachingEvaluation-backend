@@ -3,6 +3,7 @@ const config = require('../config/config').database
 
 // console.log('init sequelize...')
 
+// 实例化sequelize
 const sequelize = new Sequelize(config.DATABASE, config.USERNAME, config.PASSWORD, {
   host: config.HOST,  // 数据库地址
   dialect: 'mysql', /* 指定连接的数据库类型 选择 'mysql' | 'mariadb' | 'postgres' | 'mssql' 其一 */

@@ -1,5 +1,6 @@
-const model = require('@/controller/model')
-let User = model.User //获取User模型
+// const model = require('@/controller/model')
+// let User = model.User //获取User模型
+const {User} = require('@/models/index')
 
 /**
  * 这里的封装参考：
@@ -23,7 +24,7 @@ exports.usernameQuery = async (user) => {
   })
 } 
 
-// 查询用户是否存在，用于登录验证
+// 查询账号密码是否正确 即该用户是否存在，用于登录验证
 exports.userQuery = async (userinfo) => {
   return await User.findOne({
     where: {

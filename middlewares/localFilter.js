@@ -16,7 +16,9 @@ const refreshToken = require('./refreshToken')
 
 // 定义允许直接访问的url
 // const allowPage = ['/login', '/api/login'] // 考虑要不要设置api，以后再说吧
-const allowPage = ['/', '/dologin', '/json']  // 待定，因为目前后端的/login都是POST
+// const allowPage = ['/', '/dologin', '/onLogin', '/wxdologin', '/json', '/test']  // 待定，因为目前后端的/login都是POST
+const allowPage = require('@/config/allowPage')
+
 
 // 拦截器
 const localFilter = async (ctx) => {
@@ -61,12 +63,9 @@ const localFilter = async (ctx) => {
     }
     else {  // 无token
       console.log('无token')
-      // console.log('ctx')
-      // console.log(ctx)
+      // 无token这里，app.use()拦截后的ctx.response.body = undefined，不知道为什么
+      // 也不知道会不会有bug，等看补不补充后端的'/login'再说吧
       ctx.redirect('/json')
-      // ctx.response.body.status = false
-      // console.log('ctx')
-      // console.log(ctx)
     }
     /**
      * ！！！！！！！！！！！不能删！！！！！！！

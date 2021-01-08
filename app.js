@@ -114,8 +114,8 @@ app.use(cors({
   exposeHeaders: ['WWW-Authenticate', 'Server-Authorization'],
   maxAge: 5,
   credentials: true,
-  allowMethods: ['GET', 'POST', 'DELETE'],
-  allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  allowMethods: ['GET', 'POST', 'DELETE', 'PUT', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
 }))
 
 // 写一个中间件配置公共的信息
@@ -160,6 +160,12 @@ app.use(async (ctx, next) => {
   // await localFilter(ctx)
   // await next()
 })
+
+// 向微信请求access_token
+const storeAccessToken = require('./API/storeAccessToken')
+storeAccessToken()
+
+
 
 // 404中间件（貌似可删）
 // app.use(async (ctx, next) => {
