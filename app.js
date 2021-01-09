@@ -20,10 +20,11 @@ const config = require('./config/config')
 const localFilter = require('./middlewares/localFilter')
 
 const index = require('./routes/index')
-const users = require('./routes/users')
+// const users = require('./routes/users')
 const admin = require('./routes/admin')
+const api = require('./routes/api')
 const adminAccount = require('./routes/admin/account')
-const register = require('./routes/admin/account/register')
+// const register = require('./routes/admin/account/register')
 
 // error handler
 onerror(app)
@@ -106,10 +107,12 @@ app.use(session({
 // https://blog.csdn.net/qq_34995576/article/details/85005668?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3.control&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3.control
 app.use(cors({
   origin: function (ctx) {
-    if (ctx.url === '/login') {
+    // 待改
+    if (ctx.url === '/doLogin') {
       return "*"; // 允许来自所有域名请求
     }
-    return 'http://localhost:8080';
+    return 'http://localhost:8080'
+    // return 'http://localhost:8080'
   },
   exposeHeaders: ['WWW-Authenticate', 'Server-Authorization'],
   maxAge: 5,
@@ -191,10 +194,11 @@ app.use(async (ctx, next) => {
 
 // routes
 app.use(index.routes(), index.allowedMethods())
-app.use(users.routes(), users.allowedMethods())
+// app.use(users.routes(), users.allowedMethods()) // 不要的
 app.use(admin.routes(), admin.allowedMethods())
+app.use(api.routes(), api.allowedMethods())
 app.use(adminAccount.routes(), adminAccount.allowedMethods())
-app.use(register.routes(), register.allowedMethods())
+// app.use(register.routes(), register.allowedMethods()) // 不要的
 
 // error-handling
 app.on('error', (err, ctx) => {
