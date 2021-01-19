@@ -20,11 +20,11 @@ const config = require('./config/config')
 const localFilter = require('./middlewares/localFilter')
 
 const index = require('./routes/index')
-// const users = require('./routes/users')
+const users = require('./routes/users')
 const admin = require('./routes/admin')
 const api = require('./routes/api')
 const adminAccount = require('./routes/admin/account')
-// const register = require('./routes/admin/account/register')
+const register = require('./routes/admin/account/register')
 
 // error handler
 onerror(app)
@@ -151,6 +151,8 @@ app.use(async (ctx, next) => {
    * 无token时直接return
    */
   // 以下的代码包括localFIlter()全都写的好丑陋。。。好sb的逻辑TAT
+  // console.log('拦截前的ctx:')
+  // console.log(ctx.request)
   console.log('-----this is a token拦截中间件：')
   let res = await localFilter(ctx)
   ctx = res
@@ -164,8 +166,8 @@ app.use(async (ctx, next) => {
   // await next()
 })
 
-// 向微信请求access_token
-const storeAccessToken = require('./API/storeAccessToken')
+// 向微信请求、存储和定期更新access_token
+const storeAccessToken = require('./middlewares/storeAccessToken')
 storeAccessToken()
 
 
@@ -194,11 +196,11 @@ app.use(async (ctx, next) => {
 
 // routes
 app.use(index.routes(), index.allowedMethods())
-// app.use(users.routes(), users.allowedMethods()) // 不要的
+app.use(users.routes(), users.allowedMethods()) // 不要的
 app.use(admin.routes(), admin.allowedMethods())
 app.use(api.routes(), api.allowedMethods())
 app.use(adminAccount.routes(), adminAccount.allowedMethods())
-// app.use(register.routes(), register.allowedMethods()) // 不要的
+app.use(register.routes(), register.allowedMethods()) // 不要的
 
 // error-handling
 app.on('error', (err, ctx) => {

@@ -2,7 +2,8 @@ const {WxUser} = require('@/models/index')
 
 exports.wxUserCreate = async (wxUserinfo) => {
   return await WxUser.create({
-    uid: wxUserinfo.uid,
+    // uid: wxUserinfo.uid,
+    username: wxUserinfo.user,
     openid: wxUserinfo.openid,
     session_key: wxUserinfo.session_key,
   })
@@ -35,10 +36,3 @@ exports.deleteData = async (openid) => {
   })
 }
 
-// 更新
-// User.update({name:'张三丰'},{
-//     where: {
-//         id:3
-//     }
-// }).then(()=>{
-//     console.log('Done')

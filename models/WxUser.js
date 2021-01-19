@@ -19,9 +19,15 @@ module.exports = (sequelize, DataTypes) => {
     uid: {
       type: DataTypes.INTEGER,
       unique: true,
+      // allowNull: false,
+      // reference: "uid is table user 's primarykey, id",
+      // 暂定为模型User的外键
+    },
+    username: {
+      type: DataTypes.STRING(20),
+      unique: true,
       allowNull: false,
-      reference: "uid is table user 's primarykey, id",
-      // 外键
+      // 暂定为模型Userinfo的外键。目前也想改成模型User的外键，待改
     },
     session_key: {  // 微信的会话密钥 session_key
       type: DataTypes.STRING,

@@ -4,6 +4,9 @@ const router = require('koa-router')()
 const md5 = require('md5')
 
 const { userCreate, usernameQuery, userQuery } = require('@/controller/user')
+const {teacherCreate} = require('@/controller/teacher')
+const {classCreate} = require('@/controller/class')
+const {courseCreate} = require('@/controller/course')
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
 const localFilter = require('../../middlewares/localFilter')
@@ -19,12 +22,15 @@ const localFilter = require('../../middlewares/localFilter')
  * 还有注册后的跳转界面，返回什么result
  * 还有模型关系参考：https://segmentfault.com/a/1190000017430752
  */
-router.post('/register', async (ctx, next) => {
-  let registerUser = ctx.request.body.user
-  // console.log(ctx.request.body)
+router.post('/doregister', async (ctx, next) => {
+  console.log(ctx.request)
+  let {user, pass, jobid, name, college, dept, role, dean} = ctx.request.body
+  let registerUser = {user, pass, jobid}
+  let registerTeacher = {jobid, name, college, dept, role, dean}
   // 查询用户名是否存在
-  let query = await usernameQuery(registerUser)
+  let query = await usernameQuery(user)
   if(!query) {
+    await teacherCreate(registerTeacher)
     await userCreate(registerUser)
       .then(result => {
         ctx.body = {
@@ -101,7 +107,42 @@ router.post('/test', async (ctx, next) =>{
   ctx.body = {status: true}
 })
 
+router.post('/create-course', async (ctx, next) => {
+  let courseinfo = ctx.request.body
+  await courseCreate(courseinfo)
+  console.log(ctx.request.body)
+  ctx.body = 'create course success'
+})
 
+router.post('/create-class', async (ctx, next) => {
+  let classinfo = ctx.request.body
+  let time = ''
+  let teacher = ''
+  let classroom = ''
+  console.log(ctx.request.body)
+  if(classinfo.time) {
+    classinfo.time.forEach((timeItem, index, array) => {
+      let t = ''
+      timeItem.forEach((item) => {
+        t += item
+      })
+      time += t + ',' 
+    })
+  }
+  classinfo.teacher.forEach(item => {
+    teacher += item + ','
+  })
+  classinfo.classroom.forEach(item => {
+    classroom += item + ','
+  })
+  classinfo.time = time
+  classinfo.teacher = teacher
+  console.log(typeof(classinfo.teacher))
+  classinfo.classroom = classroom
+  console.log('classroom: ' + classroom)
+  await classCreate(classinfo)
+  ctx.body = 'create class success'
+})
 
 
 

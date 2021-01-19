@@ -17,10 +17,10 @@ const addToken = require('@/token/addToken')
  * vue管理那里增加了响应拦截，返回值有token的话会自动存入token
  */
 const refreshToken = async (result) => { // res：checkToken()的返回值
-  let { tokenCode, id, user } = result
+  let { tokenCode, jobid, user } = result
   if(tokenCode == 20001) {
-    let token = await addToken({user, id})
-
+    let token = await addToken({user, jobid})
+    console.log('jobid:' + jobid)
     // ↓好不优雅，考虑怎么改一下
     result.tokenCode = 200
     result.message = 'token 解析成功'

@@ -18,7 +18,7 @@ const checkToken = (ctx) => {
   console.log('ctx.request.url: ' + ctx.request.url)
   if(token) {
     let res = proving(token)
-    let { id, user, time, timeout } = res
+    let { jobid, user, time, timeout } = res
     let data = new Date().getTime()
 
     // addtoken.js 中用 {expiresIn: '1h'} 时，↓
@@ -42,7 +42,7 @@ const checkToken = (ctx) => {
         // 好像还是要，因为如果get的话没办法发送数据，
         // 或者改成checkToken()之后如果要addToken()，直接调用proving()？
         // 为了方便，暂定返回id，后台返回给前端时筛选出来
-        id: id,
+        jobid: jobid,
         user: user,
         message: 'token 解析成功',
         status: true,  // 登录状态，目前还没用上，不知道要不要弄到数据库去
@@ -51,7 +51,7 @@ const checkToken = (ctx) => {
       return {
         code: 200,  // 暂定200，因为是请求成功了，只是结果是token过期，所以无法访问而已
         tokenCode: 20001,
-        id: id,
+        jobid: jobid,
         user: user,
         message: 'token 已过期',
         status: false,

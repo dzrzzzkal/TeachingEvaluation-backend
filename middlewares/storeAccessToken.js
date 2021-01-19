@@ -1,4 +1,4 @@
-const wxAPI = require('./wxAPI')
+const wxAPI = require('@/API/wxAPI')
 const {accessTokenQuery, accessTokenCreate, accessTokenUpdate} = require('@/controller/wxToken')
 
 // 这个请求是服务器单独向微信方请求的，如果请求失败怎样？，待设置

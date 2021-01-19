@@ -8,9 +8,11 @@ const {User} = require('@/models/index')
  */
 
 exports.userCreate = async (userinfo) => {
+  let {user, pass, jobid} = userinfo
   return await User.create({
-    user: userinfo.user,
-    pass: userinfo.pass
+    user,
+    pass,
+    jobid,
   })
 }
 
@@ -19,7 +21,7 @@ exports.userCreate = async (userinfo) => {
 exports.usernameQuery = async (user) => {
   return await User.findOne({
     where: {
-      user: user
+      user,
     }
   })
 } 
@@ -33,3 +35,14 @@ exports.userQuery = async (userinfo) => {
     }
   })
 }
+
+// 根据user查询jobid
+exports.userJobidQuery = async (user) => {
+  return await User.findOne({
+    attributes: ['jobid'],
+    // where: {
+    //   user
+    // }
+  })
+}
+

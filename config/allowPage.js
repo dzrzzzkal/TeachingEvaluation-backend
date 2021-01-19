@@ -1,11 +1,14 @@
 // 定义允许直接访问的url
 const allowPage = [
   '/', 
+  '/doregister',
   '/doLogin',
   '/api/doLogin',
   '/api/doLogout',
+  '/api/checkToken',
   '/json',
   '/test',
+  
 ]
 
 
