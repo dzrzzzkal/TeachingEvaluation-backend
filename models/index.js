@@ -6,6 +6,7 @@ const WxTokenModel = require(__dirname + '/WxToken.js')
 const TeacherModel = require(__dirname + '/Teacher.js')
 const CourseModel = require(__dirname + '/Course.js')
 const ClassModel = require(__dirname + '/Class.js')
+const TheorySheetModel = require(__dirname + '/evaluationSheet/TheorySheet.js')
 
 // 导入模型统一管理
 const User = UserModel(sequelize, Sequelize)
@@ -14,6 +15,7 @@ const WxToken = WxTokenModel(sequelize, Sequelize)
 const Teacher = TeacherModel(sequelize, Sequelize)
 const Course = CourseModel(sequelize, Sequelize)
 const Class = ClassModel(sequelize, Sequelize)
+const TheorySheet = TheorySheetModel(sequelize, Sequelize)
 
 // wxUser.hasOne(User, {
 //   foreignKey: 'uid',
@@ -44,6 +46,11 @@ Class.belongsTo(Course, {
   // targetKey: 'id',
 })
 
+// // 外键添加到源 Class 上
+// Class.belongsTo(Teacher, {
+//  foreignKey: 'teacher_id',
+// //  targetKey: 'jobid'
+// })
 
 
 // 导出模型
@@ -54,6 +61,7 @@ module.exports = {
   Teacher,
   Course,
   Class,
+  TheorySheet,
 }
 
 // 创建表，默认false，true则是删除原有表，再创建

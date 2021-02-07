@@ -2,9 +2,11 @@ const router = require('koa-router')()
 const {userQuery, userJobidQuery} = require('@/controller/user')
 const { wxUserCreate, openidQuery, uidQuery, deleteData } = require('@/controller/wxUser')
 const {teacherQuery, teacherInfoQuery} = require('@/controller/teacher')
-const {classesQuery, classQuery} = require('@/controller/class')
+const {classesQuery, classQueryByName, classQueryByClassid} = require('@/controller/class')
+const {theorySheetCreate} = require('@/controller/evaluationSheet/theorySheet')
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
+const {exportDocx} = require('@/middlewares/officegen')
 
 const wxAPI = require('@/API/wxAPI')
 
@@ -113,19 +115,70 @@ router.post('/doLogout', async (ctx, next) => {
 // post的话直接传入请求参数user
 router.get('/getCourses', async (ctx, next) => {
   let {user, jobid} = ctx.body  // 获取用户名user、工号jobid
-  let teacher = user + jobid
-  let classRes = await classesQuery(teacher)
+  // let teacher = user + jobid
+  // let classRes = await classesQuery(teacher)
+  let classRes = await classesQuery(user)
   ctx.body = classRes
 })
 
+// 格式/class?xx=aaa?yy=bbb
 router.get('/class', async (ctx, next) => {
   // console.log(ctx.request.query)
   // console.log(ctx.request.querystring)
   let name = ctx.request.query.name
-  let res = await classQuery(name)
-  console.log(res)
+  if(name) {
+    let res = await classQueryByName(name)
+    console.log(res)
+    ctx.body = res
+  } else {
+    ctx.body = '没有参数name'
+  }
+})
+
+router.get('/classid/:classid', async (ctx, next) => {
+  let classid = ctx.params.classid
+  let res = await classQueryByClassid(classid)
+
+  // let teacherid = res['teacher_id'].split(',')
+  // let teacherinfo = []
+  // // 由于最后一个字符一定是',' 因此最后一个item一定为空，因此不用查询，设为length-1
+  // for(let i = 0; i < teacherid.length-1; i++) {
+  //   console.log('teacherid[i]: ' + teacherid[i])
+  //   let t = await teacherQuery(teacherid[i])
+  //   teacherinfo.push(t.name)
+  // }
+  // ctx.body = {
+  //   res,nodemon
+  //   teacherinfo
+  // }
+  
   ctx.body = res
 })
+
+router.post('/submitForm', async (ctx, next) => {
+  let {jobid, user} = ctx.response.body
+  let formData = ctx.request.body
+
+  // 根据classid查询对应的teacher的id
+  let classinfo = await classQueryByClassid(formData.class_id)
+
+  formData.submitter_id = jobid
+  formData.submitter = user
+  formData.teacher_id = classinfo.teacher_id
+  formData.teacher_name = classinfo.teacher_name
+
+  console.log(formData)
+
+  await theorySheetCreate(formData)
+  ctx.body = 'submitForm send!'
+  
+  // for(let i in formData) {
+  //   console.log(i)
+  //   console.log(formData[i])
+  // }
+  // await exportDocx(res)
+})
+
 
 module.exports = router
 

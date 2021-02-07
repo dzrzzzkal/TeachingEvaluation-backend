@@ -1,4 +1,4 @@
-const {Class, Course} = require('@/models/index')
+const {Class, Course, Teacher} = require('@/models/index')
 const {Op} = require('sequelize')
 const Sequelize = require('sequelize')
 
@@ -17,18 +17,19 @@ exports.classCreate = async (classinfo) => {
   })
 }
 
-exports.classesQuery = async (teacher) => {
+exports.classesQuery = async (teacher_name) => {
   return await Class.findAll({
     where: {
-      teacher: {
+      teacher_name: {
         // 模糊查询
-        [Op.like]: `%${teacher}%`
+        [Op.like]: `%${teacher_name}%`
       }
     }
   })
 }
 
-exports.classQuery = async (name) => {
+// attributes待改，不返回那么多数据
+exports.classQueryByName = async (name) => {
   return await Class.findAll({
     // attributes: [Sequelize.col('Course.name'), 'id', 'course_id'],
     include: [{
@@ -44,18 +45,20 @@ exports.classQuery = async (name) => {
   })
 }
 
-// 根据用户名user查询，返回用户名user 和 表teacher 中对应的具体信息
-// exports.teacherInfoQuery = async (user) => {
-//   return await Teacher.findOne({
-//     attributes: [Sequelize.col('User.user'), 'jobid', 'name', 'college', 'dept', 'role', 'dean'],
-//     include: [{
-//       model: User,
-//       // as: 'u',
-//       attributes: [],
-//       'where': {
-//         'user': user,
-//       }
-//     }],
-//     raw: true,
-//   })
-// }
+exports.classQueryByClassid = async (classid) =>{
+  return await Class.findOne({
+    // attributes: [Sequelize.col('Course.name'), 'id', 'course_id'],
+    include: [{
+      model: Course,
+      // attributes: [],
+    },
+    // {
+    //   model: Teacher,
+    // }
+    ],
+    where: {
+      id: classid,
+    },
+    // raw: true,
+  })
+}

@@ -33,7 +33,7 @@ onerror(app)
 // 使用koa-bodyparser来解析提交的表单信息
 app.use(bodyparser({
   enableTypes:['json', 'form', 'text'],
-  formLimit: '1mb'  //不知道是什么东西，看要不要删除！！！！！！
+  // formLimit: '1mb'  //不知道是什么东西，看要不要删除！！！！！！
 }))
 app.use(json())
 app.use(logger())
