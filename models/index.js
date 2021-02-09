@@ -7,6 +7,11 @@ const TeacherModel = require(__dirname + '/Teacher.js')
 const CourseModel = require(__dirname + '/Course.js')
 const ClassModel = require(__dirname + '/Class.js')
 const TheorySheetModel = require(__dirname + '/evaluationSheet/TheorySheet.js')
+const StudentReportSheetModel = require(__dirname + '/evaluationSheet/StudentReportSheet.js')
+const ExperimentSheetModel = require(__dirname + '/evaluationSheet/experimentSheet.js')
+const PESheetModel = require(__dirname + '/evaluationSheet/PESheet.js')
+const TheoryOfPublicWelfareSheetModel = require(__dirname + '/evaluationSheet/TheoryOfPublicWelfareSheet.js')
+const PracticeOfPublicWelfareSheetModel = require(__dirname + '/evaluationSheet/PracticeOfPublicWelfareSheet.js')
 
 // 导入模型统一管理
 const User = UserModel(sequelize, Sequelize)
@@ -16,6 +21,11 @@ const Teacher = TeacherModel(sequelize, Sequelize)
 const Course = CourseModel(sequelize, Sequelize)
 const Class = ClassModel(sequelize, Sequelize)
 const TheorySheet = TheorySheetModel(sequelize, Sequelize)
+const StudentReportSheet = StudentReportSheetModel(sequelize, Sequelize)
+const ExperimentSheet = ExperimentSheetModel(sequelize, Sequelize)
+const PESheet = PESheetModel(sequelize, Sequelize)
+const TheoryOfPublicWelfareSheet = TheoryOfPublicWelfareSheetModel(sequelize, Sequelize)
+const PracticeOfPublicWelfareSheet = PracticeOfPublicWelfareSheetModel(sequelize, Sequelize)
 
 // wxUser.hasOne(User, {
 //   foreignKey: 'uid',
@@ -62,6 +72,11 @@ module.exports = {
   Course,
   Class,
   TheorySheet,
+  StudentReportSheet,
+  ExperimentSheet,
+  PESheet,
+  TheoryOfPublicWelfareSheet,
+  PracticeOfPublicWelfareSheet,
 }
 
 // 创建表，默认false，true则是删除原有表，再创建

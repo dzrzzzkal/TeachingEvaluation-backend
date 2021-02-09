@@ -1,7 +1,7 @@
-const {TheorySheet} = require('@/models/index')
+const {TheoryOfPublicWelfareSheet} = require('@/models/index')
 const {Op} = require('sequelize')
 
-exports.theorySheetCreate = async (theorySheetinfo) => {
+exports.theoryOfPublicWelfareSheetCreate = async (theoryOfPublicWelfareSheetinfo) => {
   let {submitter_id, submitter, course_setupUnit, course_name, class_id, teacher_id, teacher_name, class_time, place, attend_num, actual_num, role, 
     environment, 
     evaluationList, appreciateMethod, concreteSuggestion, familiarity, extension, followUp, otherSuggestion, participant, submit_time, 
@@ -9,9 +9,9 @@ exports.theorySheetCreate = async (theorySheetinfo) => {
     followUpCollege, followUpCollegeSuggestion, followUpCollegeTime,
     lecturer, lecturerRectification, lecturerTime,
     followUpUnit, followUpUnitSuggestion, followUpUnitTime
-  } = theorySheetinfo
+  } = theoryOfPublicWelfareSheetinfo
 
-  return await TheorySheet.create({
+  return await TheoryOfPublicWelfareSheet.create({
     submitter_id, submitter, course_setupUnit, course_name, class_id, teacher_id, teacher_name, class_time, place, attend_num, actual_num, role, 
     environment, 
     evaluationList, appreciateMethod, concreteSuggestion, familiarity, extension, followUp, otherSuggestion, participant, submit_time, 
@@ -22,8 +22,8 @@ exports.theorySheetCreate = async (theorySheetinfo) => {
   })
 }
 
-exports.theorySheetQuery = async (submitter_id) => {
-  return await TheorySheet.findAll({
+exports.theoryOfPublicWelfareSheetQuery = async (submitter_id) => {
+  return await TheoryOfPublicWelfareSheet.findAll({
     where: {
       submitter_id: {
         [Op.like]: `%${submitter_id}%`

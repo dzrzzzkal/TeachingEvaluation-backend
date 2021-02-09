@@ -3,7 +3,13 @@ const {userQuery, userJobidQuery} = require('@/controller/user')
 const { wxUserCreate, openidQuery, uidQuery, deleteData } = require('@/controller/wxUser')
 const {teacherQuery, teacherInfoQuery} = require('@/controller/teacher')
 const {classesQuery, classQueryByName, classQueryByClassid} = require('@/controller/class')
-const {theorySheetCreate} = require('@/controller/evaluationSheet/theorySheet')
+const {theorySheetCreate, theorySheetQuery} = require('@/controller/evaluationSheet/theorySheet')
+const {studentReportSheetCreate, studentReportSheetQuery} = require('@/controller/evaluationSheet/studentReportSheet')
+const {experimentSheetCreate, experimentSheetQuery} = require('@/controller/evaluationSheet/experimentSheet')
+const {peSheetCreate, peSheetQuery} = require('@/controller/evaluationSheet/peSheet')
+const {theoryOfPublicWelfareSheetCreate, theoryOfPublicWelfareSheetQuery} = require('@/controller/evaluationSheet/theoryOfPublicWelfareSheet')
+const {practiceOfPublicWelfareSheetCreate, practiceOfPublicWelfareSheetQuery} = require('@/controller/evaluationSheet/practiceOfPublicWelfareSheet')
+
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
 const {exportDocx} = require('@/middlewares/officegen')
@@ -158,24 +164,49 @@ router.get('/classid/:classid', async (ctx, next) => {
 router.post('/submitForm', async (ctx, next) => {
   let {jobid, user} = ctx.response.body
   let formData = ctx.request.body
-
   // 根据classid查询对应的teacher的id
   let classinfo = await classQueryByClassid(formData.class_id)
-
   formData.submitter_id = jobid
   formData.submitter = user
   formData.teacher_id = classinfo.teacher_id
   formData.teacher_name = classinfo.teacher_name
 
-  console.log(formData)
+  // 根据classification写入不同的数据库
+  let classification = formData.classification
+  // console.log('cla')
+  // console.log(classification)
+  let submitter_id = formData.submitter_id
+  switch (classification) {
+    case 'theory':
+      await theorySheetCreate(formData)
+      ctx.body = await theorySheetQuery(submitter_id)
+      break;
+    case 'student report':
+      await studentReportSheetCreate(formData)
+      ctx.body = await studentReportSheetQuery(submitter_id)
+      break
+    case 'experiment':
+      await experimentSheetCreate(formData)
+      ctx.body = await experimentSheetQuery(submitter_id)
+      break
+    case 'PE':
+      await peSheetCreate(formData)
+      ctx.body = await peSheetQuery(submitter_id)
+      break
+    case 'theory of public welfare':
+      await theoryOfPublicWelfareSheetCreate(formData)
+      ctx.body = await theoryOfPublicWelfareSheetQuery(submitter_id)
+      break
+    case 'practice of public welfare':
+      await practiceOfPublicWelfareSheetCreate(formData)
+      ctx.body = await practiceOfPublicWelfareSheetQuery(submitter_id)
+      break
+    default:
+      break;
+  }
 
-  await theorySheetCreate(formData)
-  ctx.body = 'submitForm send!'
   
-  // for(let i in formData) {
-  //   console.log(i)
-  //   console.log(formData[i])
-  // }
+  
   // await exportDocx(res)
 })
 
