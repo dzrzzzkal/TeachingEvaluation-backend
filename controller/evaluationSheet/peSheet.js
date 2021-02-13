@@ -25,9 +25,32 @@ exports.peSheetCreate = async (peSheetinfo) => {
 exports.peSheetQuery = async (submitter_id) => {
   return await PESheet.findAll({
     where: {
-      submitter_id: {
-        [Op.like]: `%${submitter_id}%`
+      // submitter_id: {
+      //   [Op.like]: `%${submitter_id}%`
+      // }
+      submitter_id
+    }
+  })
+}
+
+exports.peSheetQueryByYear = async (submitter_id, year) => {
+  return await PESheet.findAll({
+    where: {
+      submitter_id,
+      submit_time: {
+        [Op.like]: `%${year}%`
       }
     }
+  })
+}
+
+// 分页查询
+exports.peSheetPaginationQuery = async (submitter_id, currentPage, pageSize) => {
+  return await PESheet.findAll({
+    where: {
+      submitter_id
+    },
+    offset: (currentPage - 1) * pageSize,
+    limit: pageSize
   })
 }

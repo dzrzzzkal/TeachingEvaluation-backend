@@ -25,9 +25,32 @@ exports.experimentSheetCreate = async (experimentSheetinfo) => {
 exports.experimentSheetQuery = async (submitter_id) => {
   return await ExperimentSheet.findAll({
     where: {
-      submitter_id: {
-        [Op.like]: `%${submitter_id}%`
+      // submitter_id: {
+      //   [Op.like]: `%${submitter_id}%`
+      // }
+      submitter_id
+    }
+  })
+}
+
+exports.experimentSheetQueryByYear = async (submitter_id, year) => {
+  return await ExperimentSheet.findAll({
+    where: {
+      submitter_id,
+      submit_time: {
+        [Op.like]: `%${year}%`
       }
     }
+  })
+}
+
+// 分页查询
+exports.experimentSheetPaginationQuery = async (submitter_id, currentPage, pageSize) => {
+  return await ExperimentSheet.findAll({
+    where: {
+      submitter_id
+    },
+    offset: (currentPage - 1) * pageSize,
+    limit: pageSize
   })
 }

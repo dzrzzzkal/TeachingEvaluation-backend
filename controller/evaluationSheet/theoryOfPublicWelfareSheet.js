@@ -25,9 +25,32 @@ exports.theoryOfPublicWelfareSheetCreate = async (theoryOfPublicWelfareSheetinfo
 exports.theoryOfPublicWelfareSheetQuery = async (submitter_id) => {
   return await TheoryOfPublicWelfareSheet.findAll({
     where: {
-      submitter_id: {
-        [Op.like]: `%${submitter_id}%`
+      // submitter_id: {
+      //   [Op.like]: `%${submitter_id}%`
+      // }
+      submitter_id
+    }
+  })
+}
+
+exports.theoryOfPublicWelfareSheetQueryByYear = async (submitter_id, year) => {
+  return await TheoryOfPublicWelfareSheet.findAll({
+    where: {
+      submitter_id,
+      submit_time: {
+        [Op.like]: `%${year}%`
       }
     }
+  })
+}
+
+// 分页查询
+exports.theoryOfPublicWelfareSheetPaginationQuery = async (submitter_id, currentPage, pageSize) => {
+  return await TheoryOfPublicWelfareSheet.findAll({
+    where: {
+      submitter_id
+    },
+    offset: (currentPage - 1) * pageSize,
+    limit: pageSize
   })
 }

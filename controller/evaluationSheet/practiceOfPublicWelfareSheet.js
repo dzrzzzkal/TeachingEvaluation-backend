@@ -23,11 +23,34 @@ exports.practiceOfPublicWelfareSheetCreate = async (practiceOfPublicWelfareSheet
 }
 
 exports.practiceOfPublicWelfareSheetQuery = async (submitter_id) => {
-  return await PracticeOfPublicWelfare.findAll({
+  return await PracticeOfPublicWelfareSheet.findAll({
     where: {
-      submitter_id: {
-        [Op.like]: `%${submitter_id}%`
+      // submitter_id: {
+      //   [Op.like]: `%${submitter_id}%`
+      // }
+      submitter_id
+    }
+  })
+}
+
+exports.practiceOfPublicWelfareSheetQueryByYear = async (submitter_id, year) => {
+  return await PracticeOfPublicWelfareSheet.findAll({
+    where: {
+      submitter_id,
+      submit_time: {
+        [Op.like]: `%${year}%`
       }
     }
+  })
+}
+
+// 分页查询
+exports.practiceOfPublicWelfareSheetPaginationQuery = async (submitter_id, currentPage, pageSize) => {
+  return await PracticeOfPublicWelfareSheet.findAll({
+    where: {
+      submitter_id
+    },
+    offset: (currentPage - 1) * pageSize,
+    limit: pageSize
   })
 }

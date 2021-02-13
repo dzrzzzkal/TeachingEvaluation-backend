@@ -3,12 +3,14 @@ const {userQuery, userJobidQuery} = require('@/controller/user')
 const { wxUserCreate, openidQuery, uidQuery, deleteData } = require('@/controller/wxUser')
 const {teacherQuery, teacherInfoQuery} = require('@/controller/teacher')
 const {classesQuery, classQueryByName, classQueryByClassid} = require('@/controller/class')
-const {theorySheetCreate, theorySheetQuery} = require('@/controller/evaluationSheet/theorySheet')
-const {studentReportSheetCreate, studentReportSheetQuery} = require('@/controller/evaluationSheet/studentReportSheet')
-const {experimentSheetCreate, experimentSheetQuery} = require('@/controller/evaluationSheet/experimentSheet')
-const {peSheetCreate, peSheetQuery} = require('@/controller/evaluationSheet/peSheet')
-const {theoryOfPublicWelfareSheetCreate, theoryOfPublicWelfareSheetQuery} = require('@/controller/evaluationSheet/theoryOfPublicWelfareSheet')
-const {practiceOfPublicWelfareSheetCreate, practiceOfPublicWelfareSheetQuery} = require('@/controller/evaluationSheet/practiceOfPublicWelfareSheet')
+// const {theorySheetCreate, theorySheetQuery, theorySheetQueryByYear, theorySheetPaginationQuery} = require('@/controller/evaluationSheet/theorySheet')
+// const {studentReportSheetCreate, studentReportSheetQuery, studentReportSheetQueryByYear, studentReportSheetPaginationQuery} = require('@/controller/evaluationSheet/studentReportSheet')
+// const {experimentSheetCreate, experimentSheetQuery, experimentSheetQueryByYear, experimentSheetPaginationQuery} = require('@/controller/evaluationSheet/experimentSheet')
+// const {peSheetCreate, peSheetQuery, peSheetQueryByYear, peSheetPaginationQuery} = require('@/controller/evaluationSheet/peSheet')
+// const {theoryOfPublicWelfareSheetCreate, theoryOfPublicWelfareSheetQuery, theoryOfPublicWelfareSheetQueryByYear, theoryOfPublicWelfareSheetPaginationQuery} = require('@/controller/evaluationSheet/theoryOfPublicWelfareSheet')
+// const {practiceOfPublicWelfareSheetCreate, practiceOfPublicWelfareSheetQuery, practiceOfPublicWelfareSheetQueryByYear, practiceOfPublicWelfareSheetPaginationQuery} = require('@/controller/evaluationSheet/practiceOfPublicWelfareSheet')
+const {evaluationSheetCreate, evaluationSheetQuery, evaluationSheetQueryByYear, evaluationSheetPaginationQuery} = require('@/controller/evaluationSheet')
+const {role_taskCountQuery} = require('@/controller/role-taskCount')
 
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
@@ -173,43 +175,133 @@ router.post('/submitForm', async (ctx, next) => {
 
   // 根据classification写入不同的数据库
   let classification = formData.classification
-  // console.log('cla')
-  // console.log(classification)
   let submitter_id = formData.submitter_id
-  switch (classification) {
-    case 'theory':
-      await theorySheetCreate(formData)
-      ctx.body = await theorySheetQuery(submitter_id)
-      break;
-    case 'student report':
-      await studentReportSheetCreate(formData)
-      ctx.body = await studentReportSheetQuery(submitter_id)
-      break
-    case 'experiment':
-      await experimentSheetCreate(formData)
-      ctx.body = await experimentSheetQuery(submitter_id)
-      break
-    case 'PE':
-      await peSheetCreate(formData)
-      ctx.body = await peSheetQuery(submitter_id)
-      break
-    case 'theory of public welfare':
-      await theoryOfPublicWelfareSheetCreate(formData)
-      ctx.body = await theoryOfPublicWelfareSheetQuery(submitter_id)
-      break
-    case 'practice of public welfare':
-      await practiceOfPublicWelfareSheetCreate(formData)
-      ctx.body = await practiceOfPublicWelfareSheetQuery(submitter_id)
-      break
-    default:
-      break;
-  }
+  // switch (classification) {
+  //   case 'theory':
+  //     await theorySheetCreate(formData)
+  //     ctx.body = await theorySheetQuery(submitter_id)
+  //     break;
+  //   case 'student report':
+  //     await studentReportSheetCreate(formData)
+  //     ctx.body = await studentReportSheetQuery(submitter_id)
+  //     break
+  //   case 'experiment':
+  //     await experimentSheetCreate(formData)
+  //     ctx.body = await experimentSheetQuery(submitter_id)
+  //     break
+  //   case 'PE':
+  //     await peSheetCreate(formData)
+  //     ctx.body = await peSheetQuery(submitter_id)
+  //     break
+  //   case 'theory of public welfare':
+  //     await theoryOfPublicWelfareSheetCreate(formData)
+  //     ctx.body = await theoryOfPublicWelfareSheetQuery(submitter_id)
+  //     break
+  //   case 'practice of public welfare':
+  //     await practiceOfPublicWelfareSheetCreate(formData)
+  //     ctx.body = await practiceOfPublicWelfareSheetQuery(submitter_id)
+  //     break
+  //   default:
+  //     break;
+  // }
+  await evaluationSheetCreate(formData)
+  ctx.body = await evaluationSheetQuery({submitter_id})
 
-  
-  
   // await exportDocx(res)
 })
 
+// 用于小程序首页查看听课评估进度
+router.get('/getEvaluationProgress', async (ctx, next) => {
+  let {jobid} = ctx.response.body
+  let year = new Date().getFullYear()
+
+  // let tS = await theorySheetQueryByYear(jobid, y)
+  // let srS = await studentReportSheetQueryByYear(jobid, y)
+  // let eS = await experimentSheetQueryByYear(jobid, y)
+  // let peS = await peSheetQueryByYear(jobid, y)
+  // let topwS = await theoryOfPublicWelfareSheetQueryByYear(jobid, y)
+  // let popwS = await practiceOfPublicWelfareSheetQueryByYear(jobid, y)
+  // let length = tS.length + srS.length + eS.length + peS.length + topwS.length + popwS.length
+
+  let eS = await evaluationSheetQueryByYear(jobid, year)
+  let length = eS.length
+
+
+  // 获取该教师身份，匹配对应的role_taskCount
+  // 每位教师每学年的听课任务是：被听课1次，听课1次；
+  // 每位督导员的听课任务是：每学年听课32次；
+  // 主管教学校领导、教务处领导听课任务是：每学年16次；
+  // 其他校领导与各学院领导听课任务是：每学年4次；
+  let role = '主管教学校领导'
+  let {count} = await role_taskCountQuery(role)
+
+  ctx.body = {
+    length,
+    taskCount: count,
+  }
+})
+
+// 小程序页面“我的”中，点击“已评估”，查看评估记录列表（只含部分表内容）
+router.get('/getSubmittedSheetsList', async (ctx, next) =>{
+  let {jobid} = ctx.response.body
+
+  let currentPage = parseInt(1) || 1
+  let pageSize = parseInt(4) || 2
+  let terms = ['id', 'course_name', 'classification', 'teacher_id', 'createdAt']
+  let eS = await evaluationSheetPaginationQuery(jobid, currentPage, pageSize, terms)
+
+  ctx.body = {
+    eS
+  }
+
+  // let tSPaging = await theorySheetPaginationQuery(jobid, currentPage, pageSize)
+  // let srSPaging = await studentReportSheetPaginationQuery(jobid, currentPage, pageSize)
+  // let eSPaging = await experimentSheetPaginationQuery(jobid, currentPage, pageSize)
+  // let peSPaging = await peSheetPaginationQuery(jobid, currentPage, pageSize)
+  // let topwSPaging = await theoryOfPublicWelfareSheetPaginationQuery(jobid, currentPage, pageSize)
+  // let popwSPaging = await practiceOfPublicWelfareSheetPaginationQuery(jobid, currentPage, pageSize)
+
+  // for(let sheet of tSPaging) {
+  //   sheets.push(sheet)    
+  // }
+  // for(let sheet of srSPaging) {
+  //   sheets.push(sheet)    
+  // }
+  // for(let sheet of eSPaging) {
+  //   sheets.push(sheet)    
+  // }
+  // for(let sheet of peSPaging) {
+  //   sheets.push(sheet)    
+  // }
+  // for(let sheet of topwSPaging) {
+  //   sheets.push(sheet)    
+  // }
+  // for(let sheet of popwSPaging) {
+  //   sheets.push(sheet)    
+  // }
+
+
+  // // 根据时间排序sheets，暂时没决定好是用submit_time还是createdAt
+  // let len = sheets.length
+  // for(let i = 0; i < len - 1; i++) {
+  //   for(let j = 0; j < len - 1; j++) {
+  //     if(new Date(sheets[j].createdAt).getTime() > new Date(sheets[j + 1].createdAt).getTime()) {
+  //       let temp = sheets[j + 1]
+  //       sheets[j + 1] = sheets[j]
+  //       sheets[j] = temp
+  //     }
+  //   }
+  // }
+})
+
+router.get('/evaluationSheet/:sheet_id', async (ctx, next) => {
+  let sheet_id = ctx.params.sheet_id
+  let {jobid} = ctx.response.body
+
+  let query = {submitter_id: jobid, id: sheet_id}
+  let sheet = await evaluationSheetQuery(query)
+  ctx.body = sheet[0] // evaluationSheetQuery()中是findAll，但是这里实际上最多只会返回1个对象
+})
 
 module.exports = router
 
