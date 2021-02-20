@@ -2,7 +2,7 @@ const router = require('koa-router')()
 const {userQuery, userJobidQuery} = require('@/controller/user')
 const { wxUserCreate, openidQuery, uidQuery, deleteData } = require('@/controller/wxUser')
 const {teacherQuery, teacherInfoQuery} = require('@/controller/teacher')
-const {classesQuery, classQueryByName, classQueryByClassid} = require('@/controller/class')
+const {classQuery, classQueryByTeacherName, classQueryByName, classQueryByClassid} = require('@/controller/class')
 // const {theorySheetCreate, theorySheetQuery, theorySheetQueryByYear, theorySheetPaginationQuery} = require('@/controller/evaluationSheet/theorySheet')
 // const {studentReportSheetCreate, studentReportSheetQuery, studentReportSheetQueryByYear, studentReportSheetPaginationQuery} = require('@/controller/evaluationSheet/studentReportSheet')
 // const {experimentSheetCreate, experimentSheetQuery, experimentSheetQueryByYear, experimentSheetPaginationQuery} = require('@/controller/evaluationSheet/experimentSheet')
@@ -118,18 +118,30 @@ router.post('/doLogout', async (ctx, next) => {
 
 })
 
-// 考虑用get还是post。
-// get的话，通过后端本身进来就时的路由拦截，localFIlter()中的checkToken()的返回值中包含user
-// post的话直接传入请求参数user
+// 格式/getCourses?xx=aaa&yy=bbb
+// 通过后端本身进来就时的路由拦截，localFIlter()中的checkToken()的返回值中包含user
 router.get('/getCourses', async (ctx, next) => {
   let {user, jobid} = ctx.body  // 获取用户名user、工号jobid
+  let {schoolYear, semester} = ctx.request.query
   // let teacher = user + jobid
-  // let classRes = await classesQuery(teacher)
-  let classRes = await classesQuery(user)
+  // let classRes = await classQueryByTeacherName(teacher)
+  // let classRes = await classQueryByTeacherName(user)
+  let query = {teacher_name: user, schoolYear, semester}
+  let classRes = await classQuery(query)
+
+
+  // 这里手动将数据库里面time例如(time: 'Fri345,')中和classroom(classroom:'D101,')的最后的逗号去掉，以后再修改vue前端和数据库
+  for(let i of classRes) {
+    i.time = i.time.substr(0, i.time.length - 1)
+    i.classroom = i.classroom.substr(0, i.classroom.length - 1)
+    i.teacher_id = i.teacher_id.substr(0, i.teacher_id.length - 1)
+  }
+
+
   ctx.body = classRes
 })
 
-// 格式/class?xx=aaa?yy=bbb
+// 格式/class?xx=aaa&yy=bbb
 router.get('/class', async (ctx, next) => {
   // console.log(ctx.request.query)
   // console.log(ctx.request.querystring)
@@ -207,7 +219,6 @@ router.post('/submitForm', async (ctx, next) => {
   await evaluationSheetCreate(formData)
   ctx.body = await evaluationSheetQuery({submitter_id})
 
-  // await exportDocx(res)
 })
 
 // 用于小程序首页查看听课评估进度
@@ -215,18 +226,12 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
   let {jobid} = ctx.response.body
   let year = new Date().getFullYear()
 
-  // let tS = await theorySheetQueryByYear(jobid, y)
-  // let srS = await studentReportSheetQueryByYear(jobid, y)
-  // let eS = await experimentSheetQueryByYear(jobid, y)
-  // let peS = await peSheetQueryByYear(jobid, y)
-  // let topwS = await theoryOfPublicWelfareSheetQueryByYear(jobid, y)
-  // let popwS = await practiceOfPublicWelfareSheetQueryByYear(jobid, y)
-  // let length = tS.length + srS.length + eS.length + peS.length + topwS.length + popwS.length
 
   let eS = await evaluationSheetQueryByYear(jobid, year)
   let length = eS.length
 
 
+  // 待弄！！！！！！！！！！！！！——————————————————————————
   // 获取该教师身份，匹配对应的role_taskCount
   // 每位教师每学年的听课任务是：被听课1次，听课1次；
   // 每位督导员的听课任务是：每学年听课32次；
@@ -234,6 +239,10 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
   // 其他校领导与各学院领导听课任务是：每学年4次；
   let role = '主管教学校领导'
   let {count} = await role_taskCountQuery(role)
+
+  // test
+  await exportDocx(eS[1])
+
 
   ctx.body = {
     length,

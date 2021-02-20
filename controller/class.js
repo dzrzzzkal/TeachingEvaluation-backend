@@ -17,8 +17,35 @@ exports.classCreate = async (classinfo) => {
   })
 }
 
-exports.classesQuery = async (teacher_name) => {
+/**
+ * 最基本的课程查询。输入查询条件和过滤条件
+ * @param {Object} query 查询条件
+ * @param {Array or Object} filter 过滤(返回)出来的条件，若为空则返回全部列对应的元素
+ */
+exports.classQuery = async (query, filter) => {
+  let {teacher_name} = query
+  // 如果输入的查询条件包含teacher_name，则设置为模糊查询，因为teacher_name以字符串形式xxx,yyy存储数组
+  if(teacher_name) {  
+    teacher_name = {
+      [Op.like]: `%${teacher_name}%`  // 模糊查询
+    }
+  }
   return await Class.findAll({
+    include: [{
+      model: Course,
+      // attributes: [],
+    }],
+    attributes: filter,
+    where: query
+  })
+}
+
+exports.classQueryByTeacherName = async (teacher_name) => {
+  return await Class.findAll({
+    include: [{
+      model: Course,
+      // attributes: [],
+    }],
     where: {
       teacher_name: {
         // 模糊查询
