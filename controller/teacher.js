@@ -3,7 +3,7 @@ const { User } = require('../models')
 const Sequelize = require('sequelize')
 
 exports.teacherCreate = async (userinfo) => {
-  let {jobid, name, college, dept, role, dean} = userinfo
+  let {jobid, name, college, dept, role, dean, deansoffice} = userinfo
   return await Teacher.create({
     jobid,
     name,
@@ -11,7 +11,7 @@ exports.teacherCreate = async (userinfo) => {
     dept,
     role,
     dean,
-    
+    deansoffice // 教务处
   })
 }
 
@@ -28,7 +28,7 @@ exports.teacherQuery = async (jobid) => {
 // 根据用户名user查询，返回用户名user 和 表teacher 中对应的具体信息
 exports.teacherInfoQuery = async (user) => {
   return await Teacher.findOne({
-    attributes: [Sequelize.col('User.user'), 'jobid', 'name', 'college', 'dept', 'role', 'dean'],
+    attributes: [Sequelize.col('User.user'), 'jobid', 'name', 'college', 'dept', 'role', 'dean', 'deansoffice'],
     include: [{
       model: User,
       // as: 'u',

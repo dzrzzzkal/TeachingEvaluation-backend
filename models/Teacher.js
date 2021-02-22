@@ -28,6 +28,9 @@ module.exports = (sequelize, DataTypes) => {
     dean: { // 系主任
       type: DataTypes.STRING(50),
     },
+    deansoffice: { // 教务处职位
+      type: DataTypes.STRING(45),
+    },
   }, {
     freezeTableName: true,
     timestamps: true

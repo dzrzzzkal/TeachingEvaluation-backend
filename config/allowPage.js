@@ -8,7 +8,7 @@ const allowPage = [
   '/api/checkToken',
   '/json',
   '/test',
-  
+  '/es'
 ]
 
 

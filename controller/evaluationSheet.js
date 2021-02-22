@@ -29,7 +29,13 @@ exports.evaluationSheetCreate = async (evaluationSheetinfo) => {
  * @param {Object} query 查询条件
  * @param {Array or Object} filter 过滤(返回)出来的条件，若为空则返回全部列对应的元素
  */
-exports.evaluationSheetQuery = async (query, filter) => {
+exports.evaluationSheetQuery = async (query, filter, fuzzySearchObj) => {
+  if(fuzzySearchObj) {
+    let objContent = query[fuzzySearchObj]
+    query[fuzzySearchObj] = {
+      [Op.like]: `%${objContent}%`
+    }
+  }
   return await EvaluationSheet.findAll({
     attributes: filter,
     where: query

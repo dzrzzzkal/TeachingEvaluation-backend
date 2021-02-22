@@ -231,22 +231,31 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
   let length = eS.length
 
 
-  // 待弄！！！！！！！！！！！！！——————————————————————————
   // 获取该教师身份，匹配对应的role_taskCount
-  // 每位教师每学年的听课任务是：被听课1次，听课1次；
-  // 每位督导员的听课任务是：每学年听课32次；
-  // 主管教学校领导、教务处领导听课任务是：每学年16次；
-  // 其他校领导与各学院领导听课任务是：每学年4次；
-  let role = '主管教学校领导'
+  let {role} = await teacherQuery(jobid, [], 'teacher_id')
+  if(role === '教师') { // 若role为'教师'，需要加上被听课次数
+    let query = {
+      teacher_id: `${jobid},`
+    }
+    let sheet = await evaluationSheetQuery(query)
+    var beEvaluatedNum = sheet.length
+  }
   let {count} = await role_taskCountQuery(role)
 
   // test
-  await exportDocx(eS[1])
+  // await exportDocx(eS[1])
 
-
-  ctx.body = {
-    length,
-    taskCount: count,
+  if(beEvaluatedNum) {
+    ctx.body = {
+      submittedNum: length,
+      beEvaluatedNum,
+      taskCount: count,
+    }
+  }else {
+    ctx.body = {
+      submittedNum: length,
+      taskCount: count,
+    }
   }
 })
 
@@ -262,45 +271,6 @@ router.get('/getSubmittedSheetsList', async (ctx, next) =>{
   ctx.body = {
     eS
   }
-
-  // let tSPaging = await theorySheetPaginationQuery(jobid, currentPage, pageSize)
-  // let srSPaging = await studentReportSheetPaginationQuery(jobid, currentPage, pageSize)
-  // let eSPaging = await experimentSheetPaginationQuery(jobid, currentPage, pageSize)
-  // let peSPaging = await peSheetPaginationQuery(jobid, currentPage, pageSize)
-  // let topwSPaging = await theoryOfPublicWelfareSheetPaginationQuery(jobid, currentPage, pageSize)
-  // let popwSPaging = await practiceOfPublicWelfareSheetPaginationQuery(jobid, currentPage, pageSize)
-
-  // for(let sheet of tSPaging) {
-  //   sheets.push(sheet)    
-  // }
-  // for(let sheet of srSPaging) {
-  //   sheets.push(sheet)    
-  // }
-  // for(let sheet of eSPaging) {
-  //   sheets.push(sheet)    
-  // }
-  // for(let sheet of peSPaging) {
-  //   sheets.push(sheet)    
-  // }
-  // for(let sheet of topwSPaging) {
-  //   sheets.push(sheet)    
-  // }
-  // for(let sheet of popwSPaging) {
-  //   sheets.push(sheet)    
-  // }
-
-
-  // // 根据时间排序sheets，暂时没决定好是用submit_time还是createdAt
-  // let len = sheets.length
-  // for(let i = 0; i < len - 1; i++) {
-  //   for(let j = 0; j < len - 1; j++) {
-  //     if(new Date(sheets[j].createdAt).getTime() > new Date(sheets[j + 1].createdAt).getTime()) {
-  //       let temp = sheets[j + 1]
-  //       sheets[j + 1] = sheets[j]
-  //       sheets[j] = temp
-  //     }
-  //   }
-  // }
 })
 
 router.get('/evaluationSheet/:sheet_id', async (ctx, next) => {

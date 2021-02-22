@@ -95,13 +95,13 @@ const exportDocx = function(formData) {
   pObj.addLineBreak()
   let roleType
   switch (role) {
-    case 'teacher':
+    case '教师':
       roleType = '听课类型：■教师听课  □领导听课  □督导听课'
       break;
-    case 'leader':
+    case '领导':
       roleType = '听课类型：□教师听课  ■领导听课  □督导听课'
       break
-    case 'supervisor':
+    case '督导':
       roleType = '听课类型：□教师听课  □领导听课  ■督导听课'
       break
   }

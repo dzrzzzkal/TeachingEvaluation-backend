@@ -4,9 +4,10 @@ const router = require('koa-router')()
 const md5 = require('md5')
 
 const { userCreate, usernameQuery, userQuery } = require('@/controller/user')
-const {teacherCreate} = require('@/controller/teacher')
+const {teacherCreate, teacherInfoQuery} = require('@/controller/teacher')
 const {classCreate} = require('@/controller/class')
 const {courseCreate} = require('@/controller/course')
+const {evaluationSheetCreate, evaluationSheetQuery, evaluationSheetQueryByYear, evaluationSheetPaginationQuery} = require('@/controller/evaluationSheet')
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
 const localFilter = require('../../middlewares/localFilter')
@@ -24,9 +25,9 @@ const localFilter = require('../../middlewares/localFilter')
  */
 router.post('/doregister', async (ctx, next) => {
   console.log(ctx.request)
-  let {user, pass, jobid, name, college, dept, role, dean} = ctx.request.body
+  let {user, pass, jobid, name, college, dept, role, dean, deansoffice} = ctx.request.body
   let registerUser = {user, pass, jobid}
-  let registerTeacher = {jobid, name, college, dept, role, dean}
+  let registerTeacher = {jobid, name, college, dept, role, dean, deansoffice}
   // 查询用户名是否存在
   let query = await usernameQuery(user)
   if(!query) {
@@ -58,8 +59,11 @@ router.post('/doregister', async (ctx, next) => {
 router.post('/doLogin', async (ctx, next) => {
   console.log(ctx)
   let loginUser = ctx.request.body
-  let query = await userQuery(loginUser)
-  if(!query) {  // 数据库中没有匹配到用户
+  let userRes = await userQuery(loginUser)  // 通过表user查询该用户
+  let user = userRes.user // 其实这里暂时也能获取jobid，看后续会不会筛选返回数据的属性
+  let userinfo = await teacherInfoQuery(user)
+  let {jobid} = userinfo
+  if(!userRes) {  // 数据库中没有匹配到用户
     ctx.body = {
       code: 500,
       msg: '用户名或密码错误。',
@@ -67,7 +71,7 @@ router.post('/doLogin', async (ctx, next) => {
   } else {  // 匹配到用户
     let token = await addToken({   // token中要携带的信息，自己定义
       user: loginUser.user,
-      id: query.id
+      jobid,
     })
     ctx.body = {
       code: 200,
@@ -144,6 +148,37 @@ router.post('/create-class', async (ctx, next) => {
   ctx.body = 'create class success'
 })
 
+router.get('/evaluationSheet/:sheet_id', async (ctx, next) => {
+  let sheet_id = ctx.params.sheet_id
+  let {jobid} = ctx.response.body
+
+  let query = {submitter_id: jobid, id: sheet_id}
+  let sheet = await evaluationSheetQuery(query)
+  ctx.body = sheet[0] // evaluationSheetQuery()中是findAll，但是这里实际上最多只会返回1个对象
+})
+
+const send = require('koa-send')
+router.get('/es', async (ctx, next) => {
+  console.log('这里是es')
+
+  // const path = '../../public/evaluationSheet1.docx';
+  // ctx.set("Content-disposition", "attachment; filename=" + path)
+  // ctx.attachment(path);
+  // await send(ctx, path)
+
+  var fileName = 'evaluationSheet1.docx';
+    // Set Content-Disposition to "attachment" to signal the client to prompt for download.
+    // Optionally specify the filename of the download.
+    // 设置实体头（表示消息体的附加信息的头字段）,提示浏览器以文件下载的方式打开
+    // 也可以直接设置 ctx.set("Content-disposition", "attachment; filename=" + fileName);
+    ctx.attachment(fileName);
+    await send(ctx, fileName, { root: __dirname});
+
+
+  // ctx.response.body='es'
+})
+
+module.exports = router
 
 
 
