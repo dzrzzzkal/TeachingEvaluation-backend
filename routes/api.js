@@ -1,7 +1,7 @@
 const router = require('koa-router')()
 const {userQuery, userJobidQuery} = require('@/controller/user')
 const { wxUserCreate, openidQuery, uidQuery, deleteData } = require('@/controller/wxUser')
-const {teacherQuery, teacherInfoQuery} = require('@/controller/teacher')
+const {teacherQueryByJobid, teacherInfoQuery} = require('@/controller/teacher')
 const {classQuery, classQueryByTeacherName, classQueryByName, classQueryByClassid} = require('@/controller/class')
 // const {theorySheetCreate, theorySheetQuery, theorySheetQueryByYear, theorySheetPaginationQuery} = require('@/controller/evaluationSheet/theorySheet')
 // const {studentReportSheetCreate, studentReportSheetQuery, studentReportSheetQueryByYear, studentReportSheetPaginationQuery} = require('@/controller/evaluationSheet/studentReportSheet')
@@ -164,7 +164,7 @@ router.get('/classid/:classid', async (ctx, next) => {
   // // 由于最后一个字符一定是',' 因此最后一个item一定为空，因此不用查询，设为length-1
   // for(let i = 0; i < teacherid.length-1; i++) {
   //   console.log('teacherid[i]: ' + teacherid[i])
-  //   let t = await teacherQuery(teacherid[i])
+  //   let t = await teacherQueryByJobid(teacherid[i])
   //   teacherinfo.push(t.name)
   // }
   // ctx.body = {
@@ -226,19 +226,22 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
   let {jobid} = ctx.response.body
   let year = new Date().getFullYear()
 
-
+  // 这里待改，其实不需要evaluationSHeetQueryByYear,到时参考下面这个evaluationSheetQuery即可
   let eS = await evaluationSheetQueryByYear(jobid, year)
   let length = eS.length
 
 
   // 获取该教师身份，匹配对应的role_taskCount
-  let {role} = await teacherQuery(jobid, [], 'teacher_id')
+  let {role} = await teacherQueryByJobid(jobid)
   if(role === '教师') { // 若role为'教师'，需要加上被听课次数
     let query = {
-      teacher_id: `${jobid},`
+      teacher_id: `${jobid},`,
+      submit_time: year
     }
-    let sheet = await evaluationSheetQuery(query)
-    var beEvaluatedNum = sheet.length
+    // let sheet = await evaluationSheetQuery(query)
+    let sheet = await evaluationSheetQuery(query, [], {}, ['teacher_id', 'submit_time'])
+    // var beEvaluatedNum = sheet.length
+    var beEvaluatedNum = sheet.count
   }
   let {count} = await role_taskCountQuery(role)
 
@@ -260,6 +263,7 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
 })
 
 // 小程序页面“我的”中，点击“已评估”，查看评估记录列表（只含部分表内容）
+// 待改，目前页码和数量是固定的，小程序端处也还没做下拉加页码
 router.get('/getSubmittedSheetsList', async (ctx, next) =>{
   let {jobid} = ctx.response.body
 
