@@ -292,9 +292,6 @@ router.post('/evaluationProgress', async (ctx, next) => {
   let {deansoffice, college, dept} = deansofficeRes.rows[0].dataValues
   let maxSearchRangeValue
 
-  // TEST!!!!!!!!!!!!!!!
-  deansoffice = '教务处'
-
   if(deansoffice === 'false') {  // deansoffice=false，只能看到'my'
     selectRangeOptions[0].disabled = true  // schoolViewable
     let collegesChildren = selectRangeOptions[0].children

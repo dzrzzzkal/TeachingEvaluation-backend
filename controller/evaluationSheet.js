@@ -178,6 +178,7 @@ exports.evaluationSheetPaginationQuery = async (submitter_id, currentPage, pageS
  * @param {Integer} pageSize 每页数据条数
  */
 exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, rangeSymbol, currentPage, pageSize) => {
+  let submitter_idStr = ''  // 用于 若查询的是'未完成'。选出在schoolYear当年没有提交过evaluationSheet的teacher，且submitter_id在query中的
   let whereStr = ""
   if(rangeSymbol.indexOf('>') === -1) { // 没有'>'，即有'<'(输入时参数不输入'=')。查询'未完成评估任务'
     for(let i in query) {
@@ -193,8 +194,10 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
         + " OR " 
         + "submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%'` + " AND submitter_id IN (SELECT DISTINCT " + `'${query[i].submitter_id}'` + " as t_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%'` + " AND teacher_id like " + `'%${query[i].teacher_id},%'` + "HAVING COUNT(teacher_id) = 0))) "
       }
+      submitter_idStr = submitter_idStr + `'${query[i].submitter_id}'`
       if(parseInt(i) !== query.length - 1) {
         whereStr = whereStr + " OR "
+        submitter_idStr = submitter_idStr + ','
       }
     }
   }else { // 查询'已完成评估任务'
@@ -228,7 +231,7 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
   if(rangeSymbol.indexOf('>') === -1) {
     mysqlQuery = mysqlQuery
     // 若查询的是'未完成'。↓选出在schoolYear当年没有提交过evaluationSheet的teacher，但是从这里返回的submittedNum和beEvaluatedNum是总数据的查询结果。而实际上由于该submitter_id在schoolYear没提交过，因此必定submittedNum=0
-    + "OR submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submitter_id NOT IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%')) `
+    + "OR submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submitter_id IN" + ` (${submitter_idStr}) AND` + " submitter_id NOT IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%')) `
   }
   mysqlQuery = mysqlQuery + "GROUP BY submitter_id" + ` LIMIT ${limit}, ${pageSize}`
   let r = await sequelize.query(mysqlQuery, { type: QueryTypes.SELECT })
