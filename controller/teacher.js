@@ -3,6 +3,8 @@ const { User } = require('../models')
 const Sequelize = require('sequelize')
 const {Op} = require('sequelize')
 const $or = Op.or
+const $and = Op.and
+const $like = Op.like
 
 exports.teacherCreate = async (userinfo) => {
   let {jobid, name, college, dept, role, dean, deansoffice} = userinfo
@@ -28,6 +30,19 @@ exports.teacherCreate = async (userinfo) => {
  * @param {Array} orQueryName 包含需要OR的某些属性的属性名（例如:jobid:xx or name:yy）的数组。数组元素均为字符串string类型。
  */
 exports.teacherQuery = async (query, pagination, filter, fuzzySearchName, selfORName, orQueryName) => {
+  if(query && query.setQuery === 'includeSearchRange&input') { // 用于设置在searchRange的情况下存在输入input搜索的query
+    let jobidQuery = query.query  // searchRange输入的jobids数组。由于searchRange时会设置selfORName=['jobid']，因此这个jobidQuery这里不需要修改$or，后面if(selfORName)中会修改成jobid: {[$or]: ['xxx','yyy']}
+    let orQuery = query.or
+    query = {
+      jobid: jobidQuery.jobid,
+      [$or]: [
+        {jobid: {[$like]: `%${orQuery.jobid}%`}},
+        {name: {[$like]: `%${orQuery.name}%`}},
+        {role: {[$like]: `%${orQuery.role}%`}},
+      ]
+    }
+  }
+
   let offset = undefined
   let limit = undefined
   if(pagination && pagination.length) {
@@ -68,6 +83,8 @@ exports.teacherQuery = async (query, pagination, filter, fuzzySearchName, selfOR
     }
     query[$or] = orArray
   }
+  console.log('queryyyyyyyyyyyyyyyyy')
+  console.log(query)
   // return await Teacher.findAll({
   return await Teacher.findAndCountAll({
     attributes: filter,

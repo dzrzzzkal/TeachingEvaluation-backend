@@ -219,7 +219,6 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
       }
     }
   }
-  let limit = (currentPage - 1) * pageSize
 
   // let mysqlQuery = 
   // "SELECT submitter_id as jobid, COUNT(*) as submittedNum, COUNT(1) OVER() as total FROM `evaluation-sheet` WHERE " + whereStr + ' GROUP BY submitter_id ' + `LIMIT ${limit}, ${pageSize}`
@@ -233,7 +232,11 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
     // 若查询的是'未完成'。↓选出在schoolYear当年没有提交过evaluationSheet的teacher，但是从这里返回的submittedNum和beEvaluatedNum是总数据的查询结果。而实际上由于该submitter_id在schoolYear没提交过，因此必定submittedNum=0
     + "OR submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submitter_id IN" + ` (${submitter_idStr}) AND` + " submitter_id NOT IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%')) `
   }
-  mysqlQuery = mysqlQuery + "GROUP BY submitter_id" + ` LIMIT ${limit}, ${pageSize}`
+  mysqlQuery = mysqlQuery + "GROUP BY submitter_id"
+  if(currentPage && pageSize) {
+    let limit = (currentPage - 1) * pageSize
+    mysqlQuery = mysqlQuery + ` LIMIT ${limit}, ${pageSize}`
+  }
   let r = await sequelize.query(mysqlQuery, { type: QueryTypes.SELECT })
 
   let notInTeacherMysql = "SELECT submitter_id FROM `evaluation-sheet` WHERE submitter_id NOT IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like '%2021%')"

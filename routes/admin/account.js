@@ -292,6 +292,9 @@ router.post('/evaluationProgress', async (ctx, next) => {
   let {deansoffice, college, dept} = deansofficeRes.rows[0].dataValues
   let maxSearchRangeValue
 
+  // TEST
+  // deansoffice = '教务处'
+
   if(deansoffice === 'false') {  // deansoffice=false，只能看到'my'
     selectRangeOptions[0].disabled = true  // schoolViewable
     let collegesChildren = selectRangeOptions[0].children
@@ -337,6 +340,120 @@ router.post('/evaluationProgress', async (ctx, next) => {
     }
     maxSearchRangeValue = [['school', college, dept], ['my']]
   }
+
+  // -----------查询最大查询范围内的听课工作完成情况，筛选条件只有最大范围、schoolYear-----------------
+  // 查询最大查询范围内的听课工作完成情况，包括哪个教务处，可查询范围教师总人数，可查询范围未完成评估任务的教师。
+  // 逻辑和下面的一样，基本就是取的下面的代码，只是下面的代码要加上searchRangeValue和input的筛选，这里不需要。
+  if(deansoffice === 'false') { // 不是教务管理人员
+    var deansofficeQueryableEP = "不是教务管理人员哦"
+  }else { // 是教务管理人员
+    let deansofficeQueryableRange = maxSearchRangeValue.concat()
+    deansofficeQueryableRange.pop() // 删除['my']
+    let jobids = []
+    let i = deansofficeQueryableRange[0]
+    let schoolRangeSearch
+    let deansofficeQueryableStr = ''
+    if(i.length === 1 && i[0] === 'school') {  // [['school']]
+      // 只要存在'school'，即查询全部evaluationSheet，而目前下面的evaluationSheetQuery()默认查询所有表。
+      // 因此这里break，则不修改查询条件，仍然jobids=[] aQuery={}
+      schoolRangeSearch = true
+      deansofficeQueryableStr = '全校'
+    }else if(i.length === 2) { // [['school', 'xx学院']]
+      let tQuery = {  // 查询该学院的教师，再根据教师查询对应的evaluationSheet
+        college: i[1]
+      }
+      let teachers_jobid = await teacherQuery(tQuery, [], ['jobid'])
+      for(let i of teachers_jobid.rows) {
+        let {jobid} = i.dataValues
+        if(jobids.indexOf(jobid) === -1) {
+          jobids.push(jobid)
+        }
+      }
+      deansofficeQueryableStr = i[1]
+    }else if(i.length === 3) {  // [['school', 'xx学院', 'xx系']]
+      let tQuery = {  // 查询该系的教师
+        college: i[1],
+        dept: i[2]
+      }
+      let teachers_jobid = await teacherQuery(tQuery, [], ['jobid'])
+      for(let i of teachers_jobid.rows) {
+        let {jobid} = i.dataValues
+        if(jobids.indexOf(jobid) === -1) {
+          jobids.push(jobid)
+        }
+      }
+      deansofficeQueryableStr = i[1] + ' ' + i[2]
+    }
+    let aQuery = {jobid: jobids}
+    let aSelfORName = ['jobid']
+    let aFilter = ['jobid', 'name', 'role', 'dean', 'deansoffice']
+    let allQueryableTeacherinfo
+    // jobids为空(jobids=[])。例如可能上面通过searchRangeValue的范围没有教师(例如查询的某个系没有教师)，也可能是查询范围为全校，需要进行区分。第一种情况直接设置teacherinfo=[]
+    if(!jobids.length && schoolRangeSearch === false){  // 如果jobids=[] 会导致 aQuery=={[]} 即where:{}，没有任何查询条件，会返回所有数据
+      allQueryableTeacherinfo = []
+    }else {
+      allQueryableTeacherinfo = await teacherQuery(aQuery, [], aFilter, [], aSelfORName)  
+    }
+
+    if(!allQueryableTeacherinfo.rows || !allQueryableTeacherinfo.rows.length) { // allQueryableTeacherinfo格式为{count: x, rows: ['xxx']}，若查询不到对应teacher，则此时{count: 0, rows: []}
+      // allQueryableTeacherinfo = {
+      //   count: 0,
+      //   rows: []
+      // }
+      var deansofficeQueryableEP = {
+        range: deansofficeQueryableStr,
+        notFinishedCount: 0,
+        teacherTotal: 0
+      }
+    }else {
+      // 查询当前教师可查询的范围内的所有人数
+      let allQueryableTeacherCount = allQueryableTeacherinfo.count
+
+      // 查询当前教师可查询的范围内所有未完成评估任务的人数
+      let queryContent = []
+      for(let i of allQueryableTeacherinfo.rows) {
+        let item = i.dataValues
+        let {jobid, role} = item
+        let taskCountQuery = await role_taskCountQuery(role)
+        let taskCount = taskCountQuery.count
+        let queryItem = {
+          submitter_id: jobid,
+          taskCount: parseInt(taskCount),
+        }
+        if(role === '教师') {
+          queryItem = {
+            submitter_id: jobid,
+            taskCount: parseInt(taskCount),
+            teacher_id: jobid
+          }
+        }
+        queryContent.push(queryItem)
+      }
+      let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, '<')
+      allQueryableNotFinishedTeacher = queryRes
+      for(let nft of allQueryableNotFinishedTeacher.rows) {
+        let nftItem = nft
+        for(let t of allQueryableTeacherinfo.rows) {
+          let tItem = t.dataValues
+          if(nftItem.jobid === tItem.jobid) {
+            for(let attr in tItem) {
+              let attrContent = tItem[attr]
+              nftItem[attr] = attrContent
+            }
+          }
+        }
+      }
+      let allQueryableNotFinishedTeacherCount = allQueryableNotFinishedTeacher.count
+
+      var deansofficeQueryableEP = {
+        range: deansofficeQueryableStr,
+        notFinishedCount: allQueryableNotFinishedTeacherCount,
+        teacherTotal: allQueryableTeacherCount
+      }
+    }
+  }
+  
+  // --------查询schoolYear范围内输入searchRangeValue、input、searchItem后的教师评估结果-----------------
 
   let query = {}
   let pagination = [currentPage, pageSize]
@@ -397,12 +514,21 @@ router.post('/evaluationProgress', async (ctx, next) => {
   // 如果输入有input，即需要先模糊查找 教师工号 / 姓名 / 角色 = input。
   // 这样先筛选出符合条件的teacher，再考虑searchItem的'完成评估任务'、'未完成评估任务'等。
   if(input) {
-    // query中有增加一个or 查询jobid/name/role
-    query.jobid = input
-    query.name = input
-    query.role = input
-    orQueryName = ['jobid', 'name', 'role']
-    fuzzySearchName.push('jobid', 'name', 'role')
+    // query中增加一个or 查询jobid/name/role
+    // query.jobid = input
+    // query.name = input
+    // query.role = input
+    // orQueryName = ['jobid', 'name', 'role']
+    // fuzzySearchName.push('jobid', 'name', 'role')
+    query = {
+      setQuery: 'includeSearchRange&input',
+      query,
+      or: {
+        jobid: input,
+        name: input,
+        role: input
+      }
+    }
   }
 
   // PS：如果是默认查询，会查询范围内的所有教师的jobid
@@ -421,7 +547,8 @@ router.post('/evaluationProgress', async (ctx, next) => {
       teacherinfo = await teacherQuery(query, pagination, filter, fuzzySearchName, selfORName, orQueryName)
     }
   }
-  console.log(teacherinfo)
+  // console.log(teacherinfo)
+
   let ep = {}
   if(!teacherinfo.rows || !teacherinfo.rows.length) { // teacherinfo格式为{count: x, rows: ['xxx']}，若查询不到对应teacher，则此时{count: 0, rows: []}
     ep = {
@@ -544,6 +671,7 @@ router.post('/evaluationProgress', async (ctx, next) => {
     selectRangeOptions,
     // teacherinfo,
     ep,
+    deansofficeQueryableEP
   }
 })
 
