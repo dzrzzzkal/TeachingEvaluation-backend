@@ -191,7 +191,7 @@ router.get('/es', async (ctx, next) => {
 })
 
 
-
+// 查询评估进度
 router.post('/evaluationProgress', async (ctx, next) => {
   let myJobid = ctx.response.body.jobid
 
@@ -1025,13 +1025,12 @@ router.post('/downLoadEvaluationProgress', async (ctx, next) => {
   ctx.body = ep.rows
 })
 
-// !!!!!!!!!!!!!!!!还没加上年份
 router.post('/evaluationSheetList', async (ctx, next) => {
   let myJobid = ctx.response.body.jobid
 
   let currentPage = parseInt(ctx.request.body.currentPage)
   let pageSize = parseInt(ctx.request.body.pageSize)
-  let {searchRangeValue, searchItem, input} = ctx.request.body // string
+  let {searchRangeValue, searchItem, schoolYearItem, input} = ctx.request.body // string
 
   // 设置可查看的评估表的范围和数据，返回给前端
   // 这里是通过设置前端可输入的范围来修改query，但是实际上有安全问题，后端应该也要设置权限。（待弄）
@@ -1228,6 +1227,13 @@ router.post('/evaluationSheetList', async (ctx, next) => {
   if(input && searchItem) { // 实际上传入的参数一定会有searchItem
     query = { [searchItem]: input } // 查询条件（目前设置只有一个）
     fuzzySearchName.push(searchItem)  // 查询条件设置为模糊查询
+  }
+
+  // 如果输入有schoolYearItem
+  if(schoolYearItem) {
+    let schoolYear = schoolYearItem.substring(0, 4) // evaulationSheet的submit_time年份
+    query.submit_time = schoolYear
+    fuzzySearchName.push('submit_time')
   }
 
   // PS：如果是默认查询，会查询范围内的所有evaluationSheet
