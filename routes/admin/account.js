@@ -677,7 +677,7 @@ router.post('/evaluationProgress', async (ctx, next) => {
 
 // 总体和上面'/evaluationProgress'一致。但是无currentPage&pageSize，因为前端要导出查询出来的所有评估进度的xlsx文件，不需要分页。
 // 且只需要返回ep。
-router.post('/downLoadEvaluationProgress', async (ctx, next) => {
+router.post('/exportEvaluationProgress', async (ctx, next) => {
   let myJobid = ctx.response.body.jobid
 
   let currentPage = parseInt(ctx.request.body.currentPage)  // 为空
@@ -1225,7 +1225,8 @@ router.post('/evaluationSheetList', async (ctx, next) => {
 
   // 如果输入有input，即需要查找
   if(input && searchItem) { // 实际上传入的参数一定会有searchItem
-    query = { [searchItem]: input } // 查询条件（目前设置只有一个）
+    // query = { [searchItem]: input } // 查询条件（目前设置只有一个）
+    query[searchItem] = input
     fuzzySearchName.push(searchItem)  // 查询条件设置为模糊查询
   }
 
@@ -1251,6 +1252,223 @@ router.post('/evaluationSheetList', async (ctx, next) => {
     es,
     selectRangeOptions
   }
+})
+
+// 和上面'/evaluationSheetList'的区别只有。输入的参数currentPage pageSize为空。且ctx.body只有es，没有selectRangeOptions
+router.post('/exportEvaluationSheetList', async (ctx, next) => {
+  let myJobid = ctx.response.body.jobid
+
+  let currentPage = parseInt(ctx.request.body.currentPage)  // 为空
+  let pageSize = parseInt(ctx.request.body.pageSize)  // 为空
+  let {searchRangeValue, searchItem, schoolYearItem, input} = ctx.request.body // string
+
+  // 设置可查看的评估表的范围和数据，返回给前端
+  // 这里是通过设置前端可输入的范围来修改query，但是实际上有安全问题，后端应该也要设置权限。（待弄）
+  let selectRangeOptions = [
+    {
+      value: 'school',
+      label: '全校',
+      children: [
+        {
+          value: '工学院',
+          label: '工学院',
+          children: [
+            {
+              value: '计算机系',
+              label: '计算机系',
+            },
+            {
+              value: '机械设计与自动化系',
+              label: '机械设计与自动化系',
+            },
+            {
+              value: '土木工程系',
+              label: '土木工程系',
+            },
+            {
+              value: '电子系',
+              label: '电子系',
+            },
+          ]
+        },
+        {
+          value: '商学院',
+          label: '商学院',
+          children: [
+            {
+              value: '工商管理',
+              label: '工商管理',
+            },
+            {
+              value: '商务英语',
+              label: '商务英语',
+            },
+          ]
+        },
+        {
+          value: '医学院',
+          label: '医学院',
+          children: [
+            {
+              value: '临床医学',
+              label: '临床医学',
+            },
+            {
+              value: '口腔科',
+              label: '口腔科',
+            },
+            {
+              value: '骨科',
+              label: '骨科',
+            }
+          ]
+        },
+        {
+          value: '海洋中心',
+          label: '海洋中心',
+          children: [
+            {
+              value: '海洋生物研究',
+              label: '海洋生物研究',
+            },
+          ]
+        },
+        {
+          value: '就业中心',
+          label: '就业中心',
+          children: [
+            {
+              value: '就业指导中心',
+              label: '就业指导中心',
+            },
+          ]
+        },
+      ]
+    },
+    {
+      value: 'my',
+      label: '我的',
+    }
+  ]
+  let deansofficeRes = await teacherQuery({jobid: myJobid}, [], ['deansoffice', 'college', 'dept'])
+  let {deansoffice, college, dept} = deansofficeRes.rows[0].dataValues
+  let maxSearchRangeValue
+  if(deansoffice === 'false') {  // deansoffice=false，只能看到'my'
+    selectRangeOptions[0].disabled = true  // schoolViewable
+    let collegesChildren = selectRangeOptions[0].children
+    for(let i of collegesChildren) {
+      i.disabled = true
+      let deptsChildren = i.children
+      for(let j of deptsChildren) {
+        j.disabled = true
+      }
+    }
+    maxSearchRangeValue = [['my']]
+  }else if(deansoffice === '教务处') { // 能看到全部
+    maxSearchRangeValue = [['school'], ['my']]
+  }else if(deansoffice === '学院') {
+    let collegesChildren = selectRangeOptions[0].children
+    for(let i of collegesChildren) {
+      if(college !== i.value) {
+        i.disabled = true
+        let deptsChildren = i.children
+        for(let j of deptsChildren) {
+          j.disabled = true
+        }
+      }
+    }
+    maxSearchRangeValue = [['school', college], ['my']]
+  }else if(deansoffice === '系') {
+    let collegesChildren = selectRangeOptions[0].children
+    for(let i of collegesChildren) {
+      if(college === i.value) {
+        let deptsChildren = i.children
+        for(let j of deptsChildren) {
+          if(dept !== j.value) {
+            j.disabled = true
+          }
+        }
+      }else {
+        i.disabled = true
+        let deptsChildren = i.children
+        for(let j of deptsChildren) {
+          j.disabled = true
+        }
+      }
+    }
+    maxSearchRangeValue = [['school', college, dept], ['my']]
+  }
+
+  let query = {}
+  let pagination = [currentPage, pageSize]
+  let filter = {}
+  let fuzzySearchName = []
+  let selfORName = []
+
+  // 筛选查询范围。若无输入查询范围，则设置为最大可查询范围（即默认的可查询范围）
+  if(!searchRangeValue) {
+    searchRangeValue = maxSearchRangeValue
+  }
+  let jobids = [] // 要在循环外，因为是jobid是跟随循环累积push进去的
+  let schoolRangeSearch = false
+  for (let i of searchRangeValue) {
+    if(i.length === 1 && i[0] === 'school') {  // [['school']]
+      // 只要存在'school'，即查询全部evaluationSheet，而目前下面的evaluationSheetQuery()默认查询所有表。
+      // 因此这里break，则不修改查询条件，仍然jobids=[] query={}
+      schoolRangeSearch = true
+      break
+    }else if(i.length === 1 && i[0] === 'my') {
+      if(jobids.indexOf(myJobid) === -1) {
+        jobids.push(myJobid)
+      }
+    }else if(i.length === 2) { // [['school', 'xx学院']]
+      let tQuery = {  // 查询该学院的教师，再根据教师查询对应的evaluationSheet
+        college: i[1]
+      }
+      let teachers_jobid = await teacherQuery(tQuery, [], ['jobid'])
+      for(let i of teachers_jobid.rows) {
+        let {jobid} = i.dataValues
+        if(jobids.indexOf(jobid) === -1) {
+          jobids.push(jobid)
+        }
+      }
+    }else if(i.length === 3) {  // [['school', 'xx学院', 'xx系']]
+      let tQuery = {  // 查询该系的教师
+        college: i[1],
+        dept: i[2]
+      }
+      let teachers_jobid = await teacherQuery(tQuery, [], ['jobid'])
+      for(let i of teachers_jobid.rows) {
+        let {jobid} = i.dataValues
+        if(jobids.indexOf(jobid) === -1) {
+          jobids.push(jobid)
+        }
+      }
+    }  
+  }
+  query = {submitter_id: jobids}
+  selfORName = ['submitter_id']
+
+  if(input && searchItem) { // 实际上传入的参数一定会有searchItem
+    // query = { [searchItem]: input } // 查询条件（目前设置只有一个）
+    query[searchItem] = input
+    fuzzySearchName.push(searchItem)  // 查询条件设置为模糊查询
+  }
+
+  if(schoolYearItem) {
+    let schoolYear = schoolYearItem.substring(0, 4) // evaulationSheet的submit_time年份
+    query.submit_time = schoolYear
+    fuzzySearchName.push('submit_time')
+  }
+
+  let es
+  if(!jobids.length && schoolRangeSearch === false) {  // jobids为空，例如可能是查询的范围没有老师，也可能是查询范围是全校，此时实际查询中相当于where={}，需要进行区分
+    es = []
+  }else {
+    es = await evaluationSheetQuery(query, pagination, filter, fuzzySearchName, selfORName)
+  }
+
+  ctx.body = es.rows
 })
 
 module.exports = router

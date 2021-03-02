@@ -83,7 +83,7 @@ exports.teacherQuery = async (query, pagination, filter, fuzzySearchName, selfOR
     }
     query[$or] = orArray
   }
-  console.log('queryyyyyyyyyyyyyyyyy')
+  console.log('teacherQuery —— query:')
   console.log(query)
   // return await Teacher.findAll({
   return await Teacher.findAndCountAll({
