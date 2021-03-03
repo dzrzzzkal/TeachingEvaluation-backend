@@ -151,11 +151,83 @@ router.post('/create-class', async (ctx, next) => {
 
 router.get('/evaluationSheet/:sheet_id', async (ctx, next) => {
   let sheet_id = ctx.params.sheet_id
-  let {jobid} = ctx.response.body
 
-  let query = {submitter_id: jobid, id: sheet_id}
-  let sheet = await evaluationSheetQuery(query)
-  ctx.body = sheet[0] // evaluationSheetQuery()中是findAll，但是这里实际上最多只会返回1个对象
+  // 这里判断是否能该教师的jobid的可查询evaluationSheet的范围，和'/evaluationSheet'的一样
+  let myJobid = ctx.response.body.jobid
+  let deansofficeRes = await teacherQuery({jobid: myJobid}, [], ['deansoffice', 'college', 'dept'])
+  let {deansoffice, college, dept} = deansofficeRes.rows[0].dataValues
+
+  // TEST！！！！！
+  // deansoffice = '教务处'
+
+  let maxSearchRangeValue
+  if(deansoffice === 'false') {  // deansoffice=false，只能看到'my'
+    maxSearchRangeValue = [['my']]
+  }else if(deansoffice === '教务处') { // 能看到全部
+    maxSearchRangeValue = [['school'], ['my']]
+  }else if(deansoffice === '学院') {
+    maxSearchRangeValue = [['school', college], ['my']]
+  }else if(deansoffice === '系') {
+    maxSearchRangeValue = [['school', college, dept], ['my']]
+  }
+
+  let searchRangeValue = maxSearchRangeValue
+  let jobids = []
+  let schoolRangeSearch = false
+  for (let i of searchRangeValue) {
+    if(i.length === 1 && i[0] === 'school') {  // [['school']]
+      // 只要存在'school'，即查询全部evaluationSheet，而目前下面的evaluationSheetQuery()默认查询所有表。
+      // 因此这里break，则不修改查询条件，仍然jobids=[] query={}
+      schoolRangeSearch = true
+      break
+    }else if(i.length === 1 && i[0] === 'my') {
+      if(jobids.indexOf(myJobid) === -1) {
+        jobids.push(myJobid)
+      }
+    }else if(i.length === 2) { // [['school', 'xx学院']]
+      let tQuery = {  // 查询该学院的教师，再根据教师查询对应的evaluationSheet
+        college: i[1]
+      }
+      let teachers_jobid = await teacherQuery(tQuery, [], ['jobid'])
+      for(let i of teachers_jobid.rows) {
+        let {jobid} = i.dataValues
+        if(jobids.indexOf(jobid) === -1) {
+          jobids.push(jobid)
+        }
+      }
+    }else if(i.length === 3) {  // [['school', 'xx学院', 'xx系']]
+      let tQuery = {  // 查询该系的教师
+        college: i[1],
+        dept: i[2]
+      }
+      let teachers_jobid = await teacherQuery(tQuery, [], ['jobid'])
+      for(let i of teachers_jobid.rows) {
+        let {jobid} = i.dataValues
+        if(jobids.indexOf(jobid) === -1) {
+          jobids.push(jobid)
+        }
+      }
+    }  
+  }
+  let query = {submitter_id: jobids, id: sheet_id}
+  let selfORName = ['submitter_id']
+
+  let es
+  let sheet = ''
+  if(!jobids.length && schoolRangeSearch === false) {  // jobids为空，例如可能是查询的范围没有老师，也可能是查询范围是全校，此时实际查询中相当于where={}，需要进行区分
+    es = []
+  }else {
+    es = await evaluationSheetQuery(query, [], {}, [], selfORName)
+  }
+
+  if(es.rows && es.rows.length) {
+    sheet = es.rows[0]
+    ctx.body = sheet
+  }else {
+    sheet = es
+    let fail = '该评估表id不存在或没有查询权限哦'
+    ctx.body = {fail}
+  }
 })
 
 const send = require('koa-send')
@@ -341,8 +413,8 @@ router.post('/evaluationProgress', async (ctx, next) => {
     maxSearchRangeValue = [['school', college, dept], ['my']]
   }
 
-  // -----------查询最大查询范围内的听课工作完成情况，筛选条件只有最大范围、schoolYear-----------------
-  // 查询最大查询范围内的听课工作完成情况，包括哪个教务处，可查询范围教师总人数，可查询范围未完成评估任务的教师。
+  // -----------查询deansoffice内(不包括自身)的听课工作完成情况，筛选条件只有最大范围、schoolYear-----------------
+  // 查询deansoffice内(不包括自身)的听课工作完成情况，包括哪个教务处，可查询范围教师总人数，可查询范围未完成评估任务的教师。
   // 逻辑和下面的一样，基本就是取的下面的代码，只是下面的代码要加上searchRangeValue和input的筛选，这里不需要。
   if(deansoffice === 'false') { // 不是教务管理人员
     var deansofficeQueryableEP = "不是教务管理人员哦"
@@ -687,92 +759,6 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
 
   // 设置可查看的评估表的范围和数据，返回给前端
   // 这里是通过设置前端可输入的范围来修改query，但是实际上有安全问题，后端应该也要设置权限。（待弄）
-  let selectRangeOptions = [
-    {
-      value: 'school',
-      label: '全校',
-      children: [
-        {
-          value: '工学院',
-          label: '工学院',
-          children: [
-            {
-              value: '计算机系',
-              label: '计算机系',
-            },
-            {
-              value: '机械设计与自动化系',
-              label: '机械设计与自动化系',
-            },
-            {
-              value: '土木工程系',
-              label: '土木工程系',
-            },
-            {
-              value: '电子系',
-              label: '电子系',
-            },
-          ]
-        },
-        {
-          value: '商学院',
-          label: '商学院',
-          children: [
-            {
-              value: '工商管理',
-              label: '工商管理',
-            },
-            {
-              value: '商务英语',
-              label: '商务英语',
-            },
-          ]
-        },
-        {
-          value: '医学院',
-          label: '医学院',
-          children: [
-            {
-              value: '临床医学',
-              label: '临床医学',
-            },
-            {
-              value: '口腔科',
-              label: '口腔科',
-            },
-            {
-              value: '骨科',
-              label: '骨科',
-            }
-          ]
-        },
-        {
-          value: '海洋中心',
-          label: '海洋中心',
-          children: [
-            {
-              value: '海洋生物研究',
-              label: '海洋生物研究',
-            },
-          ]
-        },
-        {
-          value: '就业中心',
-          label: '就业中心',
-          children: [
-            {
-              value: '就业指导中心',
-              label: '就业指导中心',
-            },
-          ]
-        },
-      ]
-    },
-    {
-      value: 'my',
-      label: '我的',
-    }
-  ]
   let deansofficeRes = await teacherQuery({jobid: myJobid}, [], ['deansoffice', 'college', 'dept'])
   let {deansoffice, college, dept} = deansofficeRes.rows[0].dataValues
   let maxSearchRangeValue
@@ -781,48 +767,12 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
   // deansoffice = '教务处'
 
   if(deansoffice === 'false') {  // deansoffice=false，只能看到'my'
-    selectRangeOptions[0].disabled = true  // schoolViewable
-    let collegesChildren = selectRangeOptions[0].children
-    for(let i of collegesChildren) {
-      i.disabled = true
-      let deptsChildren = i.children
-      for(let j of deptsChildren) {
-        j.disabled = true
-      }
-    }
     maxSearchRangeValue = [['my']]
   }else if(deansoffice === '教务处') { // 能看到全部
     maxSearchRangeValue = [['school'], ['my']]
   }else if(deansoffice === '学院') {
-    let collegesChildren = selectRangeOptions[0].children
-    for(let i of collegesChildren) {
-      if(college !== i.value) {
-        i.disabled = true
-        let deptsChildren = i.children
-        for(let j of deptsChildren) {
-          j.disabled = true
-        }
-      }
-    }
     maxSearchRangeValue = [['school', college], ['my']]
   }else if(deansoffice === '系') {
-    let collegesChildren = selectRangeOptions[0].children
-    for(let i of collegesChildren) {
-      if(college === i.value) {
-        let deptsChildren = i.children
-        for(let j of deptsChildren) {
-          if(dept !== j.value) {
-            j.disabled = true
-          }
-        }
-      }else {
-        i.disabled = true
-        let deptsChildren = i.children
-        for(let j of deptsChildren) {
-          j.disabled = true
-        }
-      }
-    }
     maxSearchRangeValue = [['school', college, dept], ['my']]
   }
   
@@ -1246,8 +1196,6 @@ router.post('/evaluationSheetList', async (ctx, next) => {
     es = await evaluationSheetQuery(query, pagination, filter, fuzzySearchName, selfORName)
   }
 
-  // ctx.body = {jobids, evaluationSheets}
-  // ctx.body = {evaluationSheets, es, es2}
   ctx.body = {
     es,
     selectRangeOptions
@@ -1262,140 +1210,16 @@ router.post('/exportEvaluationSheetList', async (ctx, next) => {
   let pageSize = parseInt(ctx.request.body.pageSize)  // 为空
   let {searchRangeValue, searchItem, schoolYearItem, input} = ctx.request.body // string
 
-  // 设置可查看的评估表的范围和数据，返回给前端
-  // 这里是通过设置前端可输入的范围来修改query，但是实际上有安全问题，后端应该也要设置权限。（待弄）
-  let selectRangeOptions = [
-    {
-      value: 'school',
-      label: '全校',
-      children: [
-        {
-          value: '工学院',
-          label: '工学院',
-          children: [
-            {
-              value: '计算机系',
-              label: '计算机系',
-            },
-            {
-              value: '机械设计与自动化系',
-              label: '机械设计与自动化系',
-            },
-            {
-              value: '土木工程系',
-              label: '土木工程系',
-            },
-            {
-              value: '电子系',
-              label: '电子系',
-            },
-          ]
-        },
-        {
-          value: '商学院',
-          label: '商学院',
-          children: [
-            {
-              value: '工商管理',
-              label: '工商管理',
-            },
-            {
-              value: '商务英语',
-              label: '商务英语',
-            },
-          ]
-        },
-        {
-          value: '医学院',
-          label: '医学院',
-          children: [
-            {
-              value: '临床医学',
-              label: '临床医学',
-            },
-            {
-              value: '口腔科',
-              label: '口腔科',
-            },
-            {
-              value: '骨科',
-              label: '骨科',
-            }
-          ]
-        },
-        {
-          value: '海洋中心',
-          label: '海洋中心',
-          children: [
-            {
-              value: '海洋生物研究',
-              label: '海洋生物研究',
-            },
-          ]
-        },
-        {
-          value: '就业中心',
-          label: '就业中心',
-          children: [
-            {
-              value: '就业指导中心',
-              label: '就业指导中心',
-            },
-          ]
-        },
-      ]
-    },
-    {
-      value: 'my',
-      label: '我的',
-    }
-  ]
   let deansofficeRes = await teacherQuery({jobid: myJobid}, [], ['deansoffice', 'college', 'dept'])
   let {deansoffice, college, dept} = deansofficeRes.rows[0].dataValues
   let maxSearchRangeValue
   if(deansoffice === 'false') {  // deansoffice=false，只能看到'my'
-    selectRangeOptions[0].disabled = true  // schoolViewable
-    let collegesChildren = selectRangeOptions[0].children
-    for(let i of collegesChildren) {
-      i.disabled = true
-      let deptsChildren = i.children
-      for(let j of deptsChildren) {
-        j.disabled = true
-      }
-    }
     maxSearchRangeValue = [['my']]
   }else if(deansoffice === '教务处') { // 能看到全部
     maxSearchRangeValue = [['school'], ['my']]
   }else if(deansoffice === '学院') {
-    let collegesChildren = selectRangeOptions[0].children
-    for(let i of collegesChildren) {
-      if(college !== i.value) {
-        i.disabled = true
-        let deptsChildren = i.children
-        for(let j of deptsChildren) {
-          j.disabled = true
-        }
-      }
-    }
     maxSearchRangeValue = [['school', college], ['my']]
   }else if(deansoffice === '系') {
-    let collegesChildren = selectRangeOptions[0].children
-    for(let i of collegesChildren) {
-      if(college === i.value) {
-        let deptsChildren = i.children
-        for(let j of deptsChildren) {
-          if(dept !== j.value) {
-            j.disabled = true
-          }
-        }
-      }else {
-        i.disabled = true
-        let deptsChildren = i.children
-        for(let j of deptsChildren) {
-          j.disabled = true
-        }
-      }
-    }
     maxSearchRangeValue = [['school', college, dept], ['my']]
   }
 
