@@ -1,6 +1,8 @@
 const {Class, Course, Teacher} = require('@/models/index')
 const {Op} = require('sequelize')
 const Sequelize = require('sequelize')
+const $or = Op.or
+const $like = Op.like
 
 exports.classCreate = async (classinfo) => {
   let {id, 
@@ -56,19 +58,50 @@ exports.classQueryByTeacherName = async (teacher_name) => {
 }
 
 // attributes待改，不返回那么多数据
-exports.classQueryByName = async (name) => {
-  return await Class.findAll({
-    // attributes: [Sequelize.col('Course.name'), 'id', 'course_id'],
-    include: [{
-      model: Course,
-      // attributes: [],
-      'where': {
-        'name': {
-          [Op.like]: `%${name}%`
-        },
+// 这里的where参考网址： https://www.javaroad.cn/questions/72608
+// 微信api中输入 班号/课程编号/教师名/课程名/课程开设单位，返回搜索到的对应的class和course的部分信息。
+exports.classQueryWithCourse = async (query) => {
+  let {teacher_id, keyword, schoolYear, semester} = query
+  let q = keyword
+  let t_id = []
+  if(teacher_id.length) {
+    for(let i of teacher_id) {
+      let tItem = {
+        [$like]: `%${i},%`
       }
-    }],
-    // raw: true,
+      t_id.push(tItem)
+    }
+  }
+  return await Class.findAll({
+    attributes: [Sequelize.col('Course.name'), Sequelize.col('Course.classification'), 'id', 'course_id', 'teacher_name', 'time', 'classroom'],
+    include: [
+      {
+        model: Course,
+        attributes: ['name', 'classification']
+      }
+    ],
+    where: {
+      [$or]: [
+        {
+          id: {[$like]: `%${q}%`}
+        },
+        {
+          course_id: {[$like]: `%${q}%`}
+        },
+        {
+          teacher_id: {[$or]: t_id}
+        },
+        {
+          '$course.name$': {[$like]: `%${q}%`}
+        },
+        {
+          '$course.setupUnit$': {[$like]: `%${q}%`}
+        }
+      ],
+      schoolYear,
+      semester
+    },
+    // raw: true
   })
 }
 

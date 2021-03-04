@@ -2,7 +2,7 @@ const router = require('koa-router')()
 const {userQuery, userJobidQuery} = require('@/controller/user')
 const { wxUserCreate, openidQuery, uidQuery, deleteData } = require('@/controller/wxUser')
 const {teacherQueryByJobid, teacherInfoQuery} = require('@/controller/teacher')
-const {classQuery, classQueryByTeacherName, classQueryByName, classQueryByClassid} = require('@/controller/class')
+const {classQuery, classQueryByTeacherName, classQueryWithCourse, classQueryByClassid} = require('@/controller/class')
 // const {theorySheetCreate, theorySheetQuery, theorySheetQueryByYear, theorySheetPaginationQuery} = require('@/controller/evaluationSheet/theorySheet')
 // const {studentReportSheetCreate, studentReportSheetQuery, studentReportSheetQueryByYear, studentReportSheetPaginationQuery} = require('@/controller/evaluationSheet/studentReportSheet')
 // const {experimentSheetCreate, experimentSheetQuery, experimentSheetQueryByYear, experimentSheetPaginationQuery} = require('@/controller/evaluationSheet/experimentSheet')
@@ -17,6 +17,7 @@ const checkToken = require('@/middlewares/checkToken')
 const {exportDocx} = require('@/middlewares/officegen')
 
 const wxAPI = require('@/API/wxAPI')
+const { teacherQuery } = require('../controller/teacher')
 
 router.prefix('/api')
 
@@ -87,23 +88,30 @@ router.post('/doLogin', async (ctx, next) => {
       else {  // 该openid存在。先通过user查询其对应的jobid，从而生成token，再查询和返回teacher的信息和返回token
         // let user = openidRes.username // openidRes.jobid: 从查询openid返回的wxuser表中的结果获取jobid
         let userRes = await userQuery(loginUser)  // 通过表user查询该用户
-        let user = userRes.user // 其实这里暂时也能获取jobid，看后续会不会筛选返回数据的属性
+        if(!userRes) {
+          result = {
+            msg: '用户名或密码错误。'
+          }
+        }else {
+          let user = userRes.user // 其实这里暂时也能获取jobid，看后续会不会筛选返回数据的属性
 
-        let userinfo = await teacherInfoQuery(user)
-        let {jobid} = userinfo
-        let token = await addToken({
-          user: user,
-          jobid: jobid
-        })
-        result = {
-          code: 200,
-          tokenCode: 200, // token返回码
-          token,  // 返回给前端
-          // user: user,
-          userinfo: userinfo,
-          msg: '该用户已存在，返回token',
-          status: true,
+          let userinfo = await teacherInfoQuery(user)
+          let {jobid} = userinfo
+          let token = await addToken({
+            user: user,
+            jobid: jobid
+          })
+          result = {
+            code: 200,
+            tokenCode: 200, // token返回码
+            token,  // 返回给前端
+            // user: user,
+            userinfo: userinfo,
+            msg: '该用户已存在，返回token',
+            status: true,
+          }
         }
+        
       }
   } else {  // 没有返回openid
     result = res // 返回errMsg
@@ -129,29 +137,44 @@ router.get('/getCourses', async (ctx, next) => {
   let query = {teacher_name: user, schoolYear, semester}
   let classRes = await classQuery(query)
 
-
-  // 这里手动将数据库里面time例如(time: 'Fri345,')中和classroom(classroom:'D101,')的最后的逗号去掉，以后再修改vue前端和数据库
-  for(let i of classRes) {
-    i.time = i.time.substr(0, i.time.length - 1)
-    i.classroom = i.classroom.substr(0, i.classroom.length - 1)
-    i.teacher_id = i.teacher_id.substr(0, i.teacher_id.length - 1)
+  if(classRes.length) {
+    // 这里手动将数据库里面time例如(time: 'Fri345,')中和classroom(classroom:'D101,')的最后的逗号去掉，以后再修改vue前端和数据库
+    for(let i of classRes) {
+      i.time = i.time.substr(0, i.time.length - 1)
+      i.classroom = i.classroom.substr(0, i.classroom.length - 1)
+      i.teacher_id = i.teacher_id.substr(0, i.teacher_id.length - 1)
+    }
   }
-
-
+  
   ctx.body = classRes
 })
 
 // 格式/class?xx=aaa&yy=bbb
 router.get('/class', async (ctx, next) => {
   // console.log(ctx.request.query)
-  // console.log(ctx.request.querystring)
-  let name = ctx.request.query.name
-  if(name) {
-    let res = await classQueryByName(name)
-    console.log(res)
+  let {keyword, schoolYear, semester} = ctx.request.query
+  console.log(schoolYear)
+  console.log(semester)
+  if(keyword) {
+    // 查询输入的可能是教师姓名
+    let teacherJobid = await teacherQuery({name: keyword}, [], ['jobid'], ['name'])
+    let teacher_idArray = []
+    if(teacherJobid.rows) {
+      for(let i of teacherJobid.rows) {
+        let item = i.dataValues.jobid
+        teacher_idArray.push(item)
+      }
+    }
+    let query = {
+      teacher_id: teacher_idArray,
+      keyword,
+      schoolYear,
+      semester
+    }
+    let res = await classQueryWithCourse(query)
     ctx.body = res
   } else {
-    ctx.body = '没有参数name'
+    ctx.body = '没有输入搜索关键字。'
   }
 })
 
@@ -172,7 +195,7 @@ router.get('/classid/:classid', async (ctx, next) => {
   //   teacherinfo
   // }
   
-  ctx.body = res
+  ctx.body = res ? res : {fail: '没有查询到对应的课程信息。'}
 })
 
 router.post('/submitForm', async (ctx, next) => {
