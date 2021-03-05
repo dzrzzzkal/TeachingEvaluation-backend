@@ -8,7 +8,9 @@ const allowPage = [
   '/api/checkToken',
   '/json',
   '/test',
-  '/es'
+  '/es',
+  // '/public/file/evaluationSheet.docx',
+  // '/api/uploadAnnualReport',
 ]
 
 

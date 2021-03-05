@@ -11,6 +11,7 @@ const {classQuery, classQueryByTeacherName, classQueryWithCourse, classQueryByCl
 // const {practiceOfPublicWelfareSheetCreate, practiceOfPublicWelfareSheetQuery, practiceOfPublicWelfareSheetQueryByYear, practiceOfPublicWelfareSheetPaginationQuery} = require('@/controller/evaluationSheet/practiceOfPublicWelfareSheet')
 const {evaluationSheetCreate, evaluationSheetQuery, evaluationSheetQueryByYear, evaluationSheetPaginationQuery} = require('@/controller/evaluationSheet')
 const {role_taskCountQuery} = require('@/controller/role-taskCount')
+const {annualReportCreate} = require('@/controller/annualReport')
 
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
@@ -285,6 +286,22 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
   }
 })
 
+const send = require('koa-send')
+// 下载年度评估报告模板
+router.get('/downloadAnnualReport', async (ctx, next) => {
+  console.log('这里是downloadAnnualReport')
+
+  let fileName = 'evaluationSheet.docx'
+  // Set Content-Disposition to "attachment" to signal the client to prompt for download.
+  // Optionally specify the filename of the download.
+  // 设置实体头（表示消息体的附加信息的头字段）,提示浏览器以文件下载的方式打开
+  // 也可以直接设置 ctx.set("Content-disposition", "attachment; filename=" + fileName);
+  ctx.attachment(fileName)
+  await send(ctx, fileName, { root: __dirname})
+
+  // ctx.response.body='es'
+})
+
 // 小程序页面“我的”中，点击“已评估”，查看评估记录列表（只含部分表内容）
 // 待改，目前页码和数量是固定的，小程序端处也还没做下拉加页码
 router.get('/getSubmittedSheetsList', async (ctx, next) =>{
@@ -306,7 +323,98 @@ router.get('/evaluationSheet/:sheet_id', async (ctx, next) => {
 
   let query = {submitter_id: jobid, id: sheet_id}
   let sheet = await evaluationSheetQuery(query)
-  ctx.body = sheet[0] // evaluationSheetQuery()中是findAll，但是这里实际上最多只会返回1个对象
+  console.log(sheet.rows[0].dataValues)
+  if(sheet.rows) {
+    sheet = sheet.rows[0].dataValues  // evaluationSheetQuery()中是findAll，但是这里实际上最多只会返回1个对象
+  }else {
+    sheet = {fail: '该课表不存在或无法查询。'}
+  }
+  ctx.body = sheet
+})
+
+
+router.post('/uploadAnnualReport', async (ctx,next)=>{
+  let {jobid} = ctx.response.body
+  let teacherinfo = await teacherQuery({jobid})
+  let {name, college, dept, dean} = teacherinfo.rows[0]
+  const {formatTime} = require('@/config/formatTime.js')
+  let time = formatTime(new Date())
+  time = time.replace(/\//g, '').replace(/:/g, '').replace(/ /g, '')
+  console.log(time)
+  let fileName = `年度总结报告_${jobid}_${name}_${college}${dept}_${time}`
+
+  const path = require('path')
+  const multer = require('@koa/multer')
+  const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+      cb(null, path.join('file/annualReport'))
+    },
+    filename: function(req, file, cb) {
+      let type = file.originalname.split('.')[1]
+      // cb(null, `${file.fieldname}-${Date.now().toString(16)}.${type}`)
+      // cb(null, `${file.fieldname}-${Date.now().getFullYear()}${Date.now().getMonth()+1}${Date.now().getDate()}.${type}`)
+      fileName = `${fileName}.${type}`
+      cb(null, fileName)
+    }
+  })
+  //文件上传限制
+  const limits = {
+    fields: 10,//非文件字段的数量
+    fileSize: 500 * 1024,//文件大小 单位 b
+    files: 1//文件数量
+  }
+  const upload = multer({storage,limits})
+
+  let err = await upload.single('annualReport')(ctx, next)  //single('file')
+    .then(res=>res)
+    .catch(err=>err)
+  if(err){
+    ctx.body = {
+      code:0,
+      msg : err.message
+    }
+  }else{
+    let annualReportData = {
+      submitter_id: jobid,
+      submitter: name,
+      college,
+      dept,
+      report_name: fileName
+    }
+    await annualReportCreate(annualReportData)
+    console.log('ctx.file:')
+    console.log(ctx.file)
+    // var path = ctx.file.path.split('/')
+    var filePath = ctx.file.path.split('\\')
+    filePath = filePath[0] +'/' + filePath[1] + '/' + filePath[2];
+    var port = ctx.req.headers.host.split(':')[1]
+    ctx.body = {
+      code:1,
+      // data:ctx.file,
+      filename:ctx.file.filename,//返回文件名
+      url:'http://' + ctx.req.headers.host+ '/' + filePath // 返回访问路径
+    }
+  }
+})
+// // router.post('/uploadAnnualReport', upload.single('file'), async (ctx,next)=>{
+// router.post('/uploadAnnualReport', upload.single('es'), async (ctx,next)=>{
+//   ctx.body = {
+//       code: 1,
+//       data: ctx.file
+//   }
+// })
+
+router.get('/getSchoolTime', async (ctx, next) => {
+  const {schoolYearList, semesterList, getSchoolYearAndSemester, getSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
+  let schoolYearAndSemester = getSchoolYearAndSemester()
+  let nowWeek = getSchoolWeek(2021, 2, 24)
+
+  ctx.body = {
+    schoolYearList,
+    semesterList,
+    schoolYearAndSemester,
+    nowWeek
+  }
 })
 
 module.exports = router

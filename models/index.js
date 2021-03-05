@@ -18,6 +18,7 @@ const ClassModel = require(__dirname + '/Class.js')
 // const PracticeOfPublicWelfareSheetModel = require(__dirname + '/evaluationSheet/PracticeOfPublicWelfareSheet.js')
 const evaluationSheetModel = require(__dirname + '/EvaluationSheet.js')
 const Role_TaskCountModel = require(__dirname + '/Role-TaskCount.js')
+const AnnualReportModel = require(__dirname + '/AnnualReport.js')
 
 
 // 导入模型统一管理
@@ -35,6 +36,7 @@ const Class = ClassModel(sequelize, Sequelize)
 // const PracticeOfPublicWelfareSheet = PracticeOfPublicWelfareSheetModel(sequelize, Sequelize)
 const EvaluationSheet = evaluationSheetModel(sequelize, Sequelize)
 const Role_TaskCount = Role_TaskCountModel(sequelize, Sequelize)
+const AnnualReport = AnnualReportModel(sequelize, Sequelize)
 
 // wxUser.hasOne(User, {
 //   foreignKey: 'uid',
@@ -71,6 +73,9 @@ Class.belongsTo(Course, {
 // //  targetKey: 'jobid'
 // })
 
+AnnualReport.belongsTo(Teacher, {
+  foreignKey: 'submitter_id'
+})
 
 // 导出模型
 module.exports = {
@@ -88,6 +93,7 @@ module.exports = {
   // PracticeOfPublicWelfareSheet,
   EvaluationSheet,
   Role_TaskCount,
+  AnnualReport
 }
 
 // 创建表，默认false，true则是删除原有表，再创建

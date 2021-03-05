@@ -13,6 +13,7 @@ const staticCache = require('koa-static-cache')
 const session = require('koa-session-minimal')
 const MysqlStore = require('koa-mysql-session')
 const cors = require('koa2-cors')
+const multer = require('@koa/multer') // wx '/api/uploadAnnualReport'中用到
 require('module-alias/register')
 
 
