@@ -28,6 +28,9 @@ module.exports = (sequelize, DataTypes) => {
     },
     report_name: {
       type: DataTypes.STRING,
+    },
+    submit_time: {
+      type: DataTypes.STRING(45),
     }
   },
   {

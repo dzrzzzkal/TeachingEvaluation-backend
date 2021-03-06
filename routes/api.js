@@ -11,7 +11,7 @@ const {classQuery, classQueryByTeacherName, classQueryWithCourse, classQueryByCl
 // const {practiceOfPublicWelfareSheetCreate, practiceOfPublicWelfareSheetQuery, practiceOfPublicWelfareSheetQueryByYear, practiceOfPublicWelfareSheetPaginationQuery} = require('@/controller/evaluationSheet/practiceOfPublicWelfareSheet')
 const {evaluationSheetCreate, evaluationSheetQuery, evaluationSheetQueryByYear, evaluationSheetPaginationQuery} = require('@/controller/evaluationSheet')
 const {role_taskCountQuery} = require('@/controller/role-taskCount')
-const {annualReportCreate} = require('@/controller/annualReport')
+const {annualReportCreate, annualReportQuery} = require('@/controller/annualReport')
 
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
@@ -291,20 +291,20 @@ const send = require('koa-send')
 router.get('/downloadAnnualReport', async (ctx, next) => {
   console.log('这里是downloadAnnualReport')
 
-  let fileName = 'evaluationSheet.docx'
+  let fileName = 'annualReportTemplate.docx'
   // Set Content-Disposition to "attachment" to signal the client to prompt for download.
   // Optionally specify the filename of the download.
   // 设置实体头（表示消息体的附加信息的头字段）,提示浏览器以文件下载的方式打开
   // 也可以直接设置 ctx.set("Content-disposition", "attachment; filename=" + fileName);
   ctx.attachment(fileName)
-  await send(ctx, fileName, { root: __dirname})
+  await send(ctx, fileName, { root: 'public/file'})
 
   // ctx.response.body='es'
 })
 
 // 小程序页面“我的”中，点击“已评估”，查看评估记录列表（只含部分表内容）
 // 待改，目前页码和数量是固定的，小程序端处也还没做下拉加页码
-router.get('/getSubmittedSheetsList', async (ctx, next) =>{
+router.get('/getSubmittedSheetList', async (ctx, next) =>{
   let {jobid} = ctx.response.body
 
   let currentPage = parseInt(1) || 1
@@ -314,6 +314,23 @@ router.get('/getSubmittedSheetsList', async (ctx, next) =>{
 
   ctx.body = {
     eS
+  }
+})
+
+router.get('/getSubmittedAnnualReport', async (ctx, next) =>{
+  let {jobid} = ctx.response.body
+
+  let currentPage = parseInt(1) || 1
+  let pageSize = parseInt(4) || 2
+
+  let query = {submitter_id: jobid}
+  let pagination = [currentPage, pageSize]
+  let filter = {}
+  let fuzzySearchName
+  let aR = await annualReportQuery(query, pagination, filter, fuzzySearchName)
+
+  ctx.body = {
+    aR
   }
 })
 
@@ -339,9 +356,9 @@ router.post('/uploadAnnualReport', async (ctx,next)=>{
   let {name, college, dept, dean} = teacherinfo.rows[0]
   const {formatTime} = require('@/config/formatTime.js')
   let time = formatTime(new Date())
-  time = time.replace(/\//g, '').replace(/:/g, '').replace(/ /g, '')
-  console.log(time)
-  let fileName = `年度总结报告_${jobid}_${name}_${college}${dept}_${time}`
+  let t = time.replace(/\//g, '-')
+  let rTime = time.replace(/\//g, '').replace(/:/g, '').replace(/ /g, '')
+  let fileName = `年度总结报告_${jobid}_${name}_${college}${dept}_${rTime}`
 
   const path = require('path')
   const multer = require('@koa/multer')
@@ -379,7 +396,8 @@ router.post('/uploadAnnualReport', async (ctx,next)=>{
       submitter: name,
       college,
       dept,
-      report_name: fileName
+      report_name: fileName,
+      submit_time: t
     }
     await annualReportCreate(annualReportData)
     console.log('ctx.file:')

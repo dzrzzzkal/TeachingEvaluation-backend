@@ -30,7 +30,7 @@ exports.teacherCreate = async (userinfo) => {
  * @param {Array} orQueryName 包含需要OR的某些属性的属性名（例如:jobid:xx or name:yy）的数组。数组元素均为字符串string类型。
  */
 exports.teacherQuery = async (query, pagination, filter, fuzzySearchName, selfORName, orQueryName) => {
-  if(query && query.setQuery === 'includeSearchRange&input') { // 用于设置在searchRange的情况下存在输入input搜索的query
+  if(query && query.setQuery === 'searchEvaluationProgressIncludeSearchRange&input') { // 用于设置在searchRange的情况下存在输入input搜索的query
     let jobidQuery = query.query  // searchRange输入的jobids数组。由于searchRange时会设置selfORName=['jobid']，因此这个jobidQuery这里不需要修改$or，后面if(selfORName)中会修改成jobid: {[$or]: ['xxx','yyy']}
     let orQuery = query.or
     query = {
