@@ -425,7 +425,7 @@ router.post('/uploadAnnualReport', async (ctx,next)=>{
 router.get('/getSchoolTime', async (ctx, next) => {
   const {schoolYearList, semesterList, getSchoolYearAndSemester, getSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
   let schoolYearAndSemester = getSchoolYearAndSemester()
-  let nowWeek = getSchoolWeek(2021, 2, 24)
+  let nowWeek = getSchoolWeek(2021, 2, 24)  // 正常的该学期开学日期，不用改month
 
   ctx.body = {
     schoolYearList,
