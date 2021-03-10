@@ -1,5 +1,6 @@
 const {EvaluationSheet} = require('@/models/index')
 const {Op} = require('sequelize')
+const $or = Op.or
 
 // 关联对象 保存 实例
 // 待看：https://blog.csdn.net/yaodong379/article/details/97621301
@@ -35,6 +36,7 @@ exports.evaluationSheetCreate = async (evaluationSheetinfo) => {
  * @param {array} fuzzySearchName 包含需要进行模糊搜索的对象的名称的数组，数组元素均为字符串string类型
  * @param {array} selfORName 包含某个属性自身需要OR的属性名（例如:submitter_id为xx or yy）的数组。数组元素均为字符串string类型。
  * （↑ PS:该属性的值在query中要为数组类型。）
+ * @param {Array} orQueryName 包含需要OR的某些属性的属性名（例如:submitter_id:xx or submitter:yy）的数组。数组元素均为字符串string类型。
  * @param {Object} groupQuery 分组查询。这里的分组查询用于判断 完成/未完成评估任务等。其包含三个属性total(分组判断>=或<的数量，>=即完成，<即未完成), attr(分组判断的属性), rangeSymbol(>=或<等)。
  */
 // exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName, selfORName) => {
@@ -76,7 +78,7 @@ exports.evaluationSheetCreate = async (evaluationSheetinfo) => {
 //     limit,  // limit: pageSize  / undefined
 //   })
 // }
-exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName, selfORName, groupQuery) => {
+exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName, selfORName, orQueryName, groupQuery) => {
   let offset = undefined
   let limit = undefined
   if(pagination && pagination.length) {
@@ -107,6 +109,16 @@ exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName
       }
     }
   }
+  if(orQueryName && orQueryName.length) {
+    let orArray = []
+    for(let i in orQueryName) {
+      let attrName = orQueryName[i]
+      let attrContent = query[attrName]
+      orArray.push({[attrName]: attrContent})
+      delete query[attrName]
+    }
+    query[$or] = orArray
+  }
   // // 目前来说没起作用！！！！！！！因为这个total是固定的，但是实际判断每个teacher的taskCount不一致！！！
   // // 分组查询。这里的分组查询用于判断 完成/未完成评估任务等。
   // // 输入(submitter_id:/teacher_id:)jobid, total, havingGroupAttr。
@@ -124,6 +136,8 @@ exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName
   //   group = attrName
   //   having = Sequelize.literal(`count(${attrName}) ${rangeSymbol} ${total}`)
   // }
+  console.log('evaluationSheet——query:')
+  console.log(query)
   return await EvaluationSheet.findAndCountAll({
     attributes: filter,
     where: query,
@@ -159,7 +173,7 @@ exports.evaluationSheetQueryByYear = async (submitter_id, year) => {
  * @param {array or object} filter 查询条件，若为空则返回全部列对应的元素
  */
 exports.evaluationSheetPaginationQuery = async (submitter_id, currentPage, pageSize, filter) => {
-  return await EvaluationSheet.findAll({
+  return await EvaluationSheet.findAndCountAll({
     attributes: filter,
     where: {
       submitter_id

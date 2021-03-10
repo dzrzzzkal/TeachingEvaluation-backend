@@ -1443,39 +1443,6 @@ router.get('/annualReport/:report_id', async (ctx, next) => {
   }
 })
 
-
-router.get('/es', async (ctx, next) => {
-  console.log('这里是es')
-  
-
-  // let {jobid} = ctx.response.body
-  // let year = new Date().getFullYear()
-
-  // // 这里待改，其实不需要evaluationSHeetQueryByYear,到时参考下面这个evaluationSheetQuery即可
-  // let eS = await evaluationSheetQueryByYear(jobid, year)
-  // let length = eS.length
-  // await exportDocx(eS[1])
-
-  
-
-  // const path = '../../public/evaluationSheet1.docx';
-  // ctx.set("Content-disposition", "attachment; filename=" + path)
-  // ctx.attachment(path);
-  // await send(ctx, path)
-
-  var fileName = 'evaluationSheet1.docx'
-    // Set Content-Disposition to "attachment" to signal the client to prompt for download.
-    // Optionally specify the filename of the download.
-    // 设置实体头（表示消息体的附加信息的头字段）,提示浏览器以文件下载的方式打开
-    // 也可以直接设置 ctx.set("Content-disposition", "attachment; filename=" + fileName);
-    ctx.attachment(fileName)
-    await send(ctx, fileName, { root: __dirname})
-
-
-  // ctx.response.body='es'
-})
-
-
 module.exports = router
 
 

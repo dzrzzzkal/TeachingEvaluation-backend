@@ -12,7 +12,8 @@ exports.annualReportCreate = async (data) => {
 }
 
 
-exports.annualReportQuery = async (query, pagination,filter, fuzzySearchName, selfORName) => {
+exports.annualReportQuery = async (query, pagination, filter, fuzzySearchName, selfORName) => {
+  // 用于网页端请求annualReportList时，要同时满足submitter_id:xxx和submitter_id:{[$or]:[yyy,zzz]}条件
   if(query && query.setQuery === 'searchAnnualReportIncludeSearchRange&input') { // 用于设置在searchRange的情况下存在输入input搜索的query
     let q = query.query  // searchRange输入的jobids数组。由于searchRange时会设置selfORName=['jobid']，因此这个jobidQuery这里不需要修改$or，后面if(selfORName)中会修改成jobid: {[$or]: ['xxx','yyy']}
     let orQuery = query.or

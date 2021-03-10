@@ -1,7 +1,10 @@
 const router = require('koa-router')()
+const send = require('koa-send')
+const fs = require('fs')
+
 const {userQuery, userJobidQuery} = require('@/controller/user')
 const { wxUserCreate, openidQuery, uidQuery, deleteData } = require('@/controller/wxUser')
-const {teacherQueryByJobid, teacherInfoQuery} = require('@/controller/teacher')
+const {teacherQuery, teacherQueryByJobid, teacherInfoQuery} = require('@/controller/teacher')
 const {classQuery, classQueryByTeacherName, classQueryWithCourse, classQueryByClassid} = require('@/controller/class')
 // const {theorySheetCreate, theorySheetQuery, theorySheetQueryByYear, theorySheetPaginationQuery} = require('@/controller/evaluationSheet/theorySheet')
 // const {studentReportSheetCreate, studentReportSheetQuery, studentReportSheetQueryByYear, studentReportSheetPaginationQuery} = require('@/controller/evaluationSheet/studentReportSheet')
@@ -16,9 +19,10 @@ const {annualReportCreate, annualReportQuery} = require('@/controller/annualRepo
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
 const {exportDocx} = require('@/middlewares/officegen')
+const {schoolYearList, semesterList, weekList, getSchoolYearAndSemester, getSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
+
 
 const wxAPI = require('@/API/wxAPI')
-const { teacherQuery } = require('../controller/teacher')
 
 router.prefix('/api')
 
@@ -136,7 +140,9 @@ router.get('/getCourses', async (ctx, next) => {
   // let classRes = await classQueryByTeacherName(teacher)
   // let classRes = await classQueryByTeacherName(user)
   let query = {teacher_name: user, schoolYear, semester}
-  let classRes = await classQuery(query)
+  let filter = {}
+  let fuzzySearchName = ['teacher_name']
+  let classRes = await classQuery(query, filter, fuzzySearchName)
 
   if(classRes.length) {
     // 这里手动将数据库里面time例如(time: 'Fri345,')中和classroom(classroom:'D101,')的最后的逗号去掉，以后再修改vue前端和数据库
@@ -202,47 +208,10 @@ router.get('/classid/:classid', async (ctx, next) => {
 router.post('/submitForm', async (ctx, next) => {
   let {jobid, user} = ctx.response.body
   let formData = ctx.request.body
-  // 根据classid查询对应的teacher的id
-  let classinfo = await classQueryByClassid(formData.class_id)
   formData.submitter_id = jobid
   formData.submitter = user
-  formData.teacher_id = classinfo.teacher_id
-  formData.teacher_name = classinfo.teacher_name
-
-  // 根据classification写入不同的数据库
-  let classification = formData.classification
-  let submitter_id = formData.submitter_id
-  // switch (classification) {
-  //   case 'theory':
-  //     await theorySheetCreate(formData)
-  //     ctx.body = await theorySheetQuery(submitter_id)
-  //     break;
-  //   case 'student report':
-  //     await studentReportSheetCreate(formData)
-  //     ctx.body = await studentReportSheetQuery(submitter_id)
-  //     break
-  //   case 'experiment':
-  //     await experimentSheetCreate(formData)
-  //     ctx.body = await experimentSheetQuery(submitter_id)
-  //     break
-  //   case 'PE':
-  //     await peSheetCreate(formData)
-  //     ctx.body = await peSheetQuery(submitter_id)
-  //     break
-  //   case 'theory of public welfare':
-  //     await theoryOfPublicWelfareSheetCreate(formData)
-  //     ctx.body = await theoryOfPublicWelfareSheetQuery(submitter_id)
-  //     break
-  //   case 'practice of public welfare':
-  //     await practiceOfPublicWelfareSheetCreate(formData)
-  //     ctx.body = await practiceOfPublicWelfareSheetQuery(submitter_id)
-  //     break
-  //   default:
-  //     break;
-  // }
   await evaluationSheetCreate(formData)
-  ctx.body = await evaluationSheetQuery({submitter_id})
-
+  ctx.body = 'Submit evaluation-sheet success.'
 })
 
 // 用于小程序首页查看听课评估进度
@@ -269,28 +238,29 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
   }
   let {count} = await role_taskCountQuery(role)
 
-  // test
-  // await exportDocx(eS[1])
+  let schoolYearAndSemester = getSchoolYearAndSemester()
+  let nowWeek = getSchoolWeek(2021, 2, 24)  // 正常的该学期开学日期，不用改month
 
   if(beEvaluatedNum) {
     ctx.body = {
       submittedNum: length,
       beEvaluatedNum,
       taskCount: count,
+      schoolYearAndSemester,
+      nowWeek
     }
   }else {
     ctx.body = {
       submittedNum: length,
       taskCount: count,
+      schoolYearAndSemester,
+      nowWeek
     }
   }
 })
 
-const send = require('koa-send')
 // 下载年度评估报告模板
-router.get('/downloadAnnualReport', async (ctx, next) => {
-  console.log('这里是downloadAnnualReport')
-
+router.get('/downloadAnnualReportTemplate', async (ctx, next) => {
   let fileName = 'annualReportTemplate.docx'
   // Set Content-Disposition to "attachment" to signal the client to prompt for download.
   // Optionally specify the filename of the download.
@@ -306,32 +276,50 @@ router.get('/downloadAnnualReport', async (ctx, next) => {
 // 待改，目前页码和数量是固定的，小程序端处也还没做下拉加页码
 router.get('/getSubmittedSheetList', async (ctx, next) =>{
   let {jobid} = ctx.response.body
+  let {keyword, page, size} = ctx.request.query
+  let classidRes = await classQuery({course_id: keyword}, ['id'], ['course_id'])  // keyword查询包括课程编号
+  classidRes.push(keyword)
 
-  let currentPage = parseInt(1) || 1
-  let pageSize = parseInt(4) || 2
-  let terms = ['id', 'course_name', 'classification', 'teacher_id', 'createdAt']
-  let eS = await evaluationSheetPaginationQuery(jobid, currentPage, pageSize, terms)
-
-  ctx.body = {
-    eS
+  let currentPage = parseInt(page) || 1
+  let pageSize = parseInt(size) || 8
+  let query = {
+    submitter_id: jobid,
+    class_id: keyword,  // Array
+    course_name: keyword,
+    classification: keyword,
+    teacher_name: keyword,
+    submit_time: keyword
   }
+  let pagination = [currentPage, pageSize]
+  let filter = ['id', 'class_id', 'course_name', 'classification', 'teacher_name', 'submit_time', 'createdAt']
+  let fuzzySearchName = ['class_id', 'course_name', 'classification', 'teacher_name', 'submit_time']
+  let selfORName = ['class_id']
+  let orQueryName = ['class_id', 'course_name', 'classification', 'teacher_name', 'submit_time']
+  let eS = await evaluationSheetQuery(query, pagination, filter, fuzzySearchName, selfORName, orQueryName)
+  // let terms = ['id', 'course_name', 'classification', 'teacher_id', 'createdAt']
+  // let eS = await evaluationSheetPaginationQuery(jobid, currentPage, pageSize, terms)
+
+  ctx.body = eS
 })
 
 router.get('/getSubmittedAnnualReport', async (ctx, next) =>{
   let {jobid} = ctx.response.body
+  let {keyword, page, size} = ctx.request.query
 
-  let currentPage = parseInt(1) || 1
-  let pageSize = parseInt(4) || 2
-
-  let query = {submitter_id: jobid}
+  let currentPage = parseInt(page) || 1
+  let pageSize = parseInt(size) || 8
+  let query = {
+    submitter_id: jobid,
+  }
+  if(keyword) {
+    query.submit_time = keyword
+  }
   let pagination = [currentPage, pageSize]
   let filter = {}
-  let fuzzySearchName
+  let fuzzySearchName = keyword ? ['submit_time'] : []
   let aR = await annualReportQuery(query, pagination, filter, fuzzySearchName)
 
-  ctx.body = {
-    aR
-  }
+  ctx.body = aR
 })
 
 router.get('/evaluationSheet/:sheet_id', async (ctx, next) => {
@@ -340,7 +328,6 @@ router.get('/evaluationSheet/:sheet_id', async (ctx, next) => {
 
   let query = {submitter_id: jobid, id: sheet_id}
   let sheet = await evaluationSheetQuery(query)
-  console.log(sheet.rows[0].dataValues)
   if(sheet.rows) {
     sheet = sheet.rows[0].dataValues  // evaluationSheetQuery()中是findAll，但是这里实际上最多只会返回1个对象
   }else {
@@ -356,7 +343,7 @@ router.post('/uploadAnnualReport', async (ctx,next)=>{
   let {name, college, dept, dean} = teacherinfo.rows[0]
   const {formatTime} = require('@/config/formatTime.js')
   let time = formatTime(new Date())
-  let t = time.replace(/\//g, '-')
+  // let t = time.replace(/\//g, '-')
   let rTime = time.replace(/\//g, '').replace(/:/g, '').replace(/ /g, '')
   let fileName = `年度总结报告_${jobid}_${name}_${college}${dept}_${rTime}`
 
@@ -397,7 +384,8 @@ router.post('/uploadAnnualReport', async (ctx,next)=>{
       college,
       dept,
       report_name: fileName,
-      submit_time: t
+      // submit_time: t
+      submit_time: time
     }
     await annualReportCreate(annualReportData)
     console.log('ctx.file:')
@@ -414,22 +402,59 @@ router.post('/uploadAnnualReport', async (ctx,next)=>{
     }
   }
 })
-// // router.post('/uploadAnnualReport', upload.single('file'), async (ctx,next)=>{
-// router.post('/uploadAnnualReport', upload.single('es'), async (ctx,next)=>{
-//   ctx.body = {
-//       code: 1,
-//       data: ctx.file
-//   }
-// })
+
+router.get('/downloadEvaluationSheet/:sheet_id', async (ctx, next) => {
+  let {jobid} = ctx.response.body
+  let sheet_id = ctx.params.sheet_id
+
+  let query = {submitter_id: jobid, id: sheet_id}
+  let eS = await evaluationSheetQuery(query)
+  let eSContent = eS.rows[0]
+  let {submitter, course_name, classification, submit_time} = eSContent
+  submit_time = submit_time.replace(/\//g, '')
+  let fileName = `${submitter}_${course_name}_${classification}_${submit_time}.docx`
+  await exportDocx(eSContent, fileName)
+  ctx.attachment(fileName)
+  await send(ctx, fileName, { root: 'file/evaluationSheet'})
+  fs.unlink('file/evaluationSheet/' + fileName, function(err) {
+    if(err) {
+      throw err
+    }
+    console.log('文件：file/evaluationSheet/' + fileName + '删除成功。')
+  })
+})
+
+
+router.get('/annualReport/:report_id', async (ctx, next) => {
+  let {jobid} = ctx.response.body
+  let report_id = ctx.params.report_id
+
+  let report = ''
+  let query = {submitter_id: jobid, id: report_id}
+  let filter = ['report_name']
+  let ar = await annualReportQuery(query, [], filter)
+
+  if(ar.rows && ar.rows.length) {
+    report = ar.rows[0]
+    let {report_name} = report
+    let fileName = report_name
+    ctx.attachment(fileName)
+    await send(ctx, fileName, {root: 'file/annualReport'})
+  }else {
+    report = ar
+    let fail = '该年度总结报告不存在或没有查询权限哦'
+    ctx.body = {fail}
+  }
+})
 
 router.get('/getSchoolTime', async (ctx, next) => {
-  const {schoolYearList, semesterList, getSchoolYearAndSemester, getSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
   let schoolYearAndSemester = getSchoolYearAndSemester()
   let nowWeek = getSchoolWeek(2021, 2, 24)  // 正常的该学期开学日期，不用改month
 
   ctx.body = {
     schoolYearList,
     semesterList,
+    weekList,
     schoolYearAndSemester,
     nowWeek
   }

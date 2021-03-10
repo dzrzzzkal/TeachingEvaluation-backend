@@ -7,7 +7,7 @@ const fs = require('fs')
 // https://www.npmjs.com/package/officegen
 // https://www.cnblogs.com/jackson-yqj/p/10329448.html 抛出接口
 
-const exportDocx = function(formData) {
+const exportDocx = function(formData, fileName) {
   let {classification, 
     submitter_id, submitter, course_setupUnit, course_name, class_id, teacher_id, teacher_name, class_time, place, attend_num, actual_num, role, 
     environment, 
@@ -571,7 +571,8 @@ const exportDocx = function(formData) {
   // pObj.addImage('some-image.png')
 
   // Let's generate the Word document into a file:
-  let out = fs.createWriteStream('C:\\Users\\Administrator\\Desktop\\evaluationSheet1.docx')
+  // let out = fs.createWriteStream('C:\\Users\\Administrator\\Desktop\\evaluationSheet1.docx')
+  let out = fs.createWriteStream('file/evaluationSheet/' + fileName)
 
   out.on('error', function(err) {
     console.log(err)

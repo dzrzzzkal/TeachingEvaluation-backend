@@ -3,6 +3,7 @@
 // 根据当前日期，返回当前学年、学期、周数。
 const schoolYearList = ['2018-2019年', '2019-2020年', '2020-2021年', '2021-2022年', '2022-2023年', '2023-2024年', '2024-2025年']
 const semesterList = ['春季学期', '夏季学期', '秋季学期']
+const weekList = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16']
 
 const getSchoolYearAndSemester = () => {
   // 根据当前日期设置学年和学期
@@ -60,4 +61,4 @@ const getSchoolWeek = (year, month, day) => { // setFullYear的month: 0-11，但
   return nowWeek
 }
 
-module.exports = {schoolYearList, semesterList, getSchoolYearAndSemester, getSchoolWeek}
+module.exports = {schoolYearList, semesterList, weekList, getSchoolYearAndSemester, getSchoolWeek}

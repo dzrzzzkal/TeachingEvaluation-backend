@@ -23,13 +23,23 @@ exports.classCreate = async (classinfo) => {
  * 最基本的课程查询。输入查询条件和过滤条件
  * @param {Object} query 查询条件
  * @param {Array or Object} filter 过滤(返回)出来的条件，若为空则返回全部列对应的元素
+ * @param {array} fuzzySearchName 包含需要进行模糊搜索的对象的名称的数组，数组元素均为字符串string类型
  */
-exports.classQuery = async (query, filter) => {
-  let {teacher_name} = query
-  // 如果输入的查询条件包含teacher_name，则设置为模糊查询，因为teacher_name以字符串形式xxx,yyy存储数组
-  if(teacher_name) {  
-    teacher_name = {
-      [Op.like]: `%${teacher_name}%`  // 模糊查询
+exports.classQuery = async (query, filter, fuzzySearchName) => {
+  // let {teacher_name} = query
+  // // 如果输入的查询条件包含teacher_name，则设置为模糊查询，因为teacher_name以字符串形式xxx,yyy存储数组
+  // if(teacher_name) {  
+  //   teacher_name = {
+  //     [Op.like]: `%${teacher_name}%`  // 模糊查询
+  //   }
+  // }
+  if(fuzzySearchName && fuzzySearchName.length) {
+    for(let i in fuzzySearchName) {
+      let attrName = fuzzySearchName[i]
+      let attrContent = query[attrName]
+      query[attrName] = {
+        [Op.like]: `%${attrContent}%`
+      }
     }
   }
   return await Class.findAll({
