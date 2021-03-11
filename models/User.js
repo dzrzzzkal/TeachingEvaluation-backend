@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     pass: {
-      type: DataTypes.STRING(20),
+      type: DataTypes.STRING(255),
       allowNull: false
     },
     // identity: {

@@ -266,7 +266,8 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
   let notInTeacher = await sequelize.query(notInTeacherMysql, { type: QueryTypes.SELECT })
 
   let count = 0
-  if(r) {
+  // 查询不到值时，r: []，因此不能用if(r)
+  if(r.length) {
     count = r[0].total
   }
   // 修改一下输出的数据格式。写入taskCount，写入"教师"的被听课次数。因为上面完整查询语句mysqlQuery无法写入次数

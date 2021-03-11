@@ -14,9 +14,11 @@ const {annualReportQuery} = require('@/controller/annualReport')
 
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
+const {encrypt, decrypt} = require('@/middlewares/bcrypt')
 const localFilter = require('../../middlewares/localFilter')
 
 const {selectableCollegeAndDeptOptions} = require('@/public/data/selectableCollegeAndDeptOptions')
+const { enc } = require('crypto-js')
 
 
 // 目前登录注册主要参考网址：
@@ -32,6 +34,7 @@ const {selectableCollegeAndDeptOptions} = require('@/public/data/selectableColle
 router.post('/doregister', async (ctx, next) => {
   console.log(ctx.request)
   let {user, pass, jobid, name, college, dept, role, dean, deansoffice} = ctx.request.body
+  pass = await encrypt(pass)
   let registerUser = {user, pass, jobid}
   let registerTeacher = {jobid, name, college, dept, role, dean, deansoffice}
   // 查询用户名是否存在
@@ -63,29 +66,37 @@ router.post('/doregister', async (ctx, next) => {
 
 // 网页端登录
 router.post('/doLogin', async (ctx, next) => {
-  console.log(ctx)
   let loginUser = ctx.request.body
-  let userRes = await userQuery(loginUser)  // 通过表user查询该用户
-  let user = userRes.user // 其实这里暂时也能获取jobid，看后续会不会筛选返回数据的属性
-  let userinfo = await teacherInfoQuery(user)
-  let {jobid} = userinfo
-  if(!userRes) {  // 数据库中没有匹配到用户
+  let userRes = await usernameQuery(loginUser.user)
+  if(!userRes) {  // 数据库中没有匹配到用户名 null
     ctx.body = {
       code: 500,
       msg: '用户名或密码错误。',
     }
-  } else {  // 匹配到用户
-    let token = await addToken({   // token中要携带的信息，自己定义
-      user: loginUser.user,
-      jobid,
-    })
-    ctx.body = {
-      code: 200,
-      tokenCode: 200, // token返回码
-      token,  // 返回给前端
-      user: loginUser.user,
-      msg: '登录成功。',
-      status: true, // 登录状态，目前还没用上，不知道要不要弄到数据库去
+  }else {  // 匹配到用户名
+    // let user = userRes.user // 其实这里暂时也能获取jobid，看后续会不会筛选返回数据的属性
+    let {user, pass} = userRes
+    let passCheck = await decrypt(loginUser.pass, pass) // return true/false
+    if(!passCheck) {  // 密码错误
+      ctx.body = {
+        code: 500,
+        msg: '用户名或密码错误。',
+      }
+    }else {
+      let userinfo = await teacherInfoQuery(user)
+      let {jobid} = userinfo
+      let token = await addToken({   // token中要携带的信息，自己定义
+        user: loginUser.user,
+        jobid,
+      })
+      ctx.body = {
+        code: 200,
+        tokenCode: 200, // token返回码
+        token,  // 返回给前端
+        user: loginUser.user,
+        msg: '登录成功。',
+        status: true, // 登录状态，目前还没用上，不知道要不要弄到数据库去
+      }
       /**
        * PS: 前端拿到后台的token，可以
        * 1.存到localStorage。在src/components/login.vue中将token和user存进localStorage中

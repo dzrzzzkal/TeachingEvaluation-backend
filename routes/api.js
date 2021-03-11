@@ -18,6 +18,7 @@ const {annualReportCreate, annualReportQuery} = require('@/controller/annualRepo
 
 const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
+const {decrypt} = require('@/middlewares/bcrypt')
 const {exportDocx} = require('@/middlewares/officegen')
 const {schoolYearList, semesterList, weekList, getSchoolYearAndSemester, getSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
 
@@ -53,34 +54,44 @@ router.post('/doLogin', async (ctx, next) => {
   if(openid) {
     let openidRes = await openidQuery(openid)
       if(!openidRes) {  // 数据库中没有该openid，则先通过表user判断是否存在该用户user
-        let userRes = await userQuery(loginUser)  // 通过表user查询该用户
-        if(!userRes) {  // 该用户user不存在
+        // let userRes = await userQuery(loginUser)  // 通过表user查询该用户
+        let userRes = await usernameQuery(user)
+        if(!userRes) {  // 该用户名user不存在
           result = {
             code: 500,
             msg: '用户名或密码错误。'
           }
-        } else {  // 该用户user存在，则创建微信用户wxuser，并返回表teacher的信息和token
-          let {jobid, user} = userRes
-          let wxUserinfo = {
-            user,
-            openid,
-            session_key,
+        } else {  // 该用户名user存在，再判断密码是否正确
+          let passCheck = await decrypt(pass, UserRes.pass) // return true/false
+          if(!passCheck) {  // 密码错误
+            result = {
+              code: 500,
+              msg: '用户名或密码错误。'
+            }
+          }else { // 用户名密码正确，则创建微信用户wxuser，并返回表teacher的信息和token
+            let {jobid, user} = userRes
+            let wxUserinfo = {
+              user,
+              openid,
+              session_key,
+            }
+            await wxUserCreate(wxUserinfo)  // 创建wxuser
+            let userinfo = await teacherInfoQuery(user)  // 查询teacher的信息
+            let token = await addToken({   // 创建token
+              user,
+              jobid,
+            })
+            result = {
+              code: 200,
+              tokenCode: 200, // token返回码
+              token,  // 返回给前端
+              // user: user,
+              userinfo: userinfo,
+              msg: '用户创建成功，返回token。',
+              status: true,
+            }
           }
-          await wxUserCreate(wxUserinfo)  // 创建wxuser
-          let userinfo = await teacherInfoQuery(user)  // 查询teacher的信息
-          let token = await addToken({   // 创建token
-            user,
-            jobid,
-          })
-          result = {
-            code: 200,
-            tokenCode: 200, // token返回码
-            token,  // 返回给前端
-            // user: user,
-            userinfo: userinfo,
-            msg: '用户创建成功，返回token。',
-            status: true,
-          }
+          
         }
       }
       /**
