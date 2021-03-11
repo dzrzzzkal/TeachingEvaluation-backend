@@ -2,7 +2,7 @@ const router = require('koa-router')()
 const send = require('koa-send')
 const fs = require('fs')
 
-const {userQuery, userJobidQuery} = require('@/controller/user')
+const {userQuery, usernameQuery, userJobidQuery} = require('@/controller/user')
 const { wxUserCreate, openidQuery, uidQuery, deleteData } = require('@/controller/wxUser')
 const {teacherQuery, teacherQueryByJobid, teacherInfoQuery} = require('@/controller/teacher')
 const {classQuery, classQueryByTeacherName, classQueryWithCourse, classQueryByClassid} = require('@/controller/class')
@@ -62,7 +62,7 @@ router.post('/doLogin', async (ctx, next) => {
             msg: '用户名或密码错误。'
           }
         } else {  // 该用户名user存在，再判断密码是否正确
-          let passCheck = await decrypt(pass, UserRes.pass) // return true/false
+          let passCheck = await decrypt(pass, userRes.pass) // return true/false
           if(!passCheck) {  // 密码错误
             result = {
               code: 500,
@@ -103,28 +103,37 @@ router.post('/doLogin', async (ctx, next) => {
        *  */ 
       else {  // 该openid存在。先通过user查询其对应的jobid，从而生成token，再查询和返回teacher的信息和返回token
         // let user = openidRes.username // openidRes.jobid: 从查询openid返回的wxuser表中的结果获取jobid
-        let userRes = await userQuery(loginUser)  // 通过表user查询该用户
+        // let userRes = await userQuery(loginUser)  // 通过表user查询该用户
+        let userRes = await usernameQuery(user)
         if(!userRes) {
           result = {
             msg: '用户名或密码错误。'
           }
         }else {
-          let user = userRes.user // 其实这里暂时也能获取jobid，看后续会不会筛选返回数据的属性
+          let passCheck = await decrypt(pass, userRes.pass)
+          if(!passCheck) {  // 密码错误
+            result = {
+              code: 500,
+              msg: '用户名或密码错误。'
+            }
+          }else {
+            let user = userRes.user // 其实这里暂时也能获取jobid，看后续会不会筛选返回数据的属性
 
-          let userinfo = await teacherInfoQuery(user)
-          let {jobid} = userinfo
-          let token = await addToken({
-            user: user,
-            jobid: jobid
-          })
-          result = {
-            code: 200,
-            tokenCode: 200, // token返回码
-            token,  // 返回给前端
-            // user: user,
-            userinfo: userinfo,
-            msg: '该用户已存在，返回token',
-            status: true,
+            let userinfo = await teacherInfoQuery(user)
+            let {jobid} = userinfo
+            let token = await addToken({
+              user: user,
+              jobid: jobid
+            })
+            result = {
+              code: 200,
+              tokenCode: 200, // token返回码
+              token,  // 返回给前端
+              // user: user,
+              userinfo: userinfo,
+              msg: '该用户已存在，返回token',
+              status: true,
+            }
           }
         }
         
