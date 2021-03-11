@@ -8,7 +8,7 @@ const { userCreate, usernameQuery, userQuery } = require('@/controller/user')
 const {teacherQuery, teacherCreate, teacherQueryByJobid, teacherInfoQuery} = require('@/controller/teacher')
 const {classCreate} = require('@/controller/class')
 const {courseCreate} = require('@/controller/course')
-const {evaluationSheetCreate, evaluationSheetQuery, evaluationSheetQueryByYear, evaluationSheetPaginationQuery, evaluationSheetQueryIfFinishedProgress} = require('@/controller/evaluationSheet')
+const {evaluationSheetCreate, evaluationSheetQuery, evaluationSheetUpdate, evaluationSheetQueryByYear, evaluationSheetPaginationQuery, evaluationSheetQueryIfFinishedProgress} = require('@/controller/evaluationSheet')
 const {role_taskCountQuery} = require('@/controller/role-taskCount')
 const {annualReportQuery} = require('@/controller/annualReport')
 
@@ -1440,6 +1440,22 @@ router.get('/annualReport/:report_id', async (ctx, next) => {
     report = ar
     let fail = '该年度总结报告不存在或没有查询权限哦'
     ctx.body = {fail}
+  }
+})
+
+router.post('/modifyFollowUpRecord', async (ctx, next) => {
+  let {id, followUpRecord} = ctx.request.body
+  let query = {id}
+  let form = followUpRecord
+  let updateRes = await evaluationSheetUpdate(form, query)
+  if(updateRes[0] !== 0) {
+    ctx.body = {
+      msg: 'modify success'
+    }
+  }else {
+    ctx.body = {
+      errMsg: 'modify fail'
+    }
   }
 })
 

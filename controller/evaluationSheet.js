@@ -148,7 +148,16 @@ exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName
   })
 }
 
-
+/**
+ *
+ * @param {Object} form 要修改的内容
+ * @param {Object} query 查询条件
+ */
+exports.evaluationSheetUpdate = async (form, query) => {
+  return await EvaluationSheet.update(form, {
+    where: query
+  })
+}
 
 
 // 查看submit_time为某个年份的某人的evaluationSheet
