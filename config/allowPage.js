@@ -9,6 +9,8 @@ const allowPage = [
   '/json',
   '/test',
   '/es',
+  '/file/annualReportTemplate.docx',
+  '/public/file/annualReportTemplate.docx'
 ]
 
 

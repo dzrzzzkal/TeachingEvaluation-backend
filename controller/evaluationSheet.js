@@ -37,6 +37,7 @@ exports.evaluationSheetCreate = async (evaluationSheetinfo) => {
  * @param {array} selfORName 包含某个属性自身需要OR的属性名（例如:submitter_id为xx or yy）的数组。数组元素均为字符串string类型。
  * （↑ PS:该属性的值在query中要为数组类型。）
  * @param {Array} orQueryName 包含需要OR的某些属性的属性名（例如:submitter_id:xx or submitter:yy）的数组。数组元素均为字符串string类型。
+ * @param {Array} order 排序
  * @param {Object} groupQuery 分组查询。这里的分组查询用于判断 完成/未完成评估任务等。其包含三个属性total(分组判断>=或<的数量，>=即完成，<即未完成), attr(分组判断的属性), rangeSymbol(>=或<等)。
  */
 // exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName, selfORName) => {
@@ -78,7 +79,7 @@ exports.evaluationSheetCreate = async (evaluationSheetinfo) => {
 //     limit,  // limit: pageSize  / undefined
 //   })
 // }
-exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName, selfORName, orQueryName, groupQuery) => {
+exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName, selfORName, orQueryName, order, groupQuery) => {
   let offset = undefined
   let limit = undefined
   if(pagination && pagination.length) {
@@ -143,6 +144,7 @@ exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName
     where: query,
     offset, // offset: (currentPage - 1) * pageSize, / undefined
     limit,  // limit: pageSize  / undefined
+    order,  // [['id', 'DESC'/'ASC']] 、"id DESC"
     // group,
     // having,
   })

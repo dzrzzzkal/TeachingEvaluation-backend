@@ -499,6 +499,7 @@ const exportDocx = function(formData, fileName) {
         followUpDegreeText = '□ 教研室/系/院/组织了交流讨论；□ 与被听课教师/教学单位负责人/教学管理服务中心交流、反馈了意见；■ 建议修订课程目标'
         break;
       default:
+        followUpDegreeText = '□ 教研室/系/院/组织了交流讨论；□ 与被听课教师/教学单位负责人/教学管理服务中心交流、反馈了意见；□ 建议修订课程目标'
         break;
     }
     let followUpDegreeTable = [
@@ -525,10 +526,22 @@ const exportDocx = function(formData, fileName) {
     docx.createTable(followUpDegreeTable, followUpDegreeTableStyle)
     // pObj.addLineBreak()
     pObj = docx.createP()
-    let followUpParticipantTimeResolve = followUpParticipantTime.split('/')
-    let followUpCollegeTimeResolve = followUpCollegeTime.split('/')
-    let lecturerTimeResolve = lecturerTime.split('/')
-    let followUpUnitTimeResolve = followUpUnitTime.split('/')
+    let followUpParticipantTimeResolve = ['    ', '  ', '  ']
+    let followUpCollegeTimeResolve = ['    ', '  ', '  ']
+    let lecturerTimeResolve = ['    ', '  ', '  ']
+    let followUpUnitTimeResolve = ['    ', '  ', '  ']
+    if(followUpParticipantTime) {
+      followUpParticipantTimeResolve = followUpParticipantTime.split('/')
+    }
+    if(followUpCollegeTime) {
+      followUpCollegeTimeResolve = followUpCollegeTime.split('/')
+    }
+    if(lecturerTime) {
+      lecturerTimeResolve = lecturerTime.split('/')
+    }
+    if(followUpUnitTime) {
+      followUpUnitTimeResolve = followUpUnitTime.split('/')
+    }
     let followUpRecordTable = [
       [{
         val: ['（跟进听课）', '听课教师意见及建议'],
@@ -539,7 +552,7 @@ const exportDocx = function(formData, fileName) {
           cellColWidth: 240,
         }
       }, {
-        val: [followUpParticipantSuggestion, '', `             （签名）：${followUpParticipant}      ${followUpParticipantTimeResolve[0]}年 ${followUpParticipantTimeResolve[1]}月 ${followUpParticipantTimeResolve[2]}日`],
+        val: [followUpParticipantSuggestion, '', `             （签名）：${followUpParticipant ? followUpParticipant : ''}      ${followUpParticipantTimeResolve[0]}年 ${followUpParticipantTimeResolve[1]}月 ${followUpParticipantTimeResolve[2]}日`],
         opts: {
           align: "left",
           vAlign: "left",
@@ -547,9 +560,9 @@ const exportDocx = function(formData, fileName) {
           cellColWidth: 1200,
         }
       }], 
-      [['学院（部、中心）跟进意见'], [followUpCollegeSuggestion, '', `             （签名）：${followUpCollege}      ${followUpCollegeTimeResolve[0]}年 ${followUpCollegeTimeResolve[1]}月 ${followUpCollegeTimeResolve[2]}日`]],
-      [['主讲教师反思及整改方案'], [lecturerRectification, '', `             （签名）：${lecturer}      ${lecturerTimeResolve[0]}年 ${lecturerTimeResolve[1]}月 ${lecturerTimeResolve[2]}日`]],
-      [['教学管理、服务部门意见'], [followUpUnitSuggestion, '', `             （签名）：${followUpUnit}      ${followUpUnitTimeResolve[0]}年 ${followUpUnitTimeResolve[1]}月 ${followUpUnitTimeResolve[2]}日`]]
+      [['学院（部、中心）跟进意见'], [followUpCollegeSuggestion, '', `             （签名）：${followUpCollege ? followUpCollege : ''}      ${followUpCollegeTimeResolve[0]}年 ${followUpCollegeTimeResolve[1]}月 ${followUpCollegeTimeResolve[2]}日`]],
+      [['主讲教师反思及整改方案'], [lecturerRectification, '', `             （签名）：${lecturer ? lecturer : ''}      ${lecturerTimeResolve[0]}年 ${lecturerTimeResolve[1]}月 ${lecturerTimeResolve[2]}日`]],
+      [['教学管理、服务部门意见'], [followUpUnitSuggestion, '', `             （签名）：${followUpUnit ? followUpUnit : ''}      ${followUpUnitTimeResolve[0]}年 ${followUpUnitTimeResolve[1]}月 ${followUpUnitTimeResolve[2]}日`]]
     ]
     let followUpRecordTableStyle = {
       tableColWidth: 4000,

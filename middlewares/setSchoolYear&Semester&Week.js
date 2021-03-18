@@ -53,7 +53,7 @@ const getSchoolWeek = (year, month, day) => { // setFullYear的month: 0-11，但
   var d1 = new Date()
   // 当前时间与当年第二周第一天的毫秒数之差除以一周的毫秒数并取整即为当前日期距本的第二周已过的周数
   // 结果加上2即为当天为本年的第几周（如果在一周的第一天的0点运行此程序，结果会比实际值大1，此种情况请自行处理）
-  console.log(2+parseInt((d1.getTime()-d.getTime())/1000/60/60/24/7));
+  // console.log(2+parseInt((d1.getTime()-d.getTime())/1000/60/60/24/7));
   let nowWeek = 2+parseInt((d1.getTime()-d.getTime())/1000/60/60/24/7)
   if(nowWeek > 16) {
     nowWeek = 16

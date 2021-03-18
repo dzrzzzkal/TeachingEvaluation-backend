@@ -20,8 +20,8 @@ module.exports = (userinfo) => {  // 创建token并导出
     user: userinfo.user,
     jobid: userinfo.jobid,
     time: new Date().getTime(),
-    // timeout: 1000*60*60*2
-    timeout: 1000*60*60*2,  //60mins*2
+    timeout: 1000*10
+    // timeout: 1000*60*60*2,  //60mins*2
   }, secret)
   return token
 }

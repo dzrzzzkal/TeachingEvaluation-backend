@@ -20,6 +20,7 @@ const addToken = require('@/token/addToken')
 const checkToken = require('@/middlewares/checkToken')
 const {decrypt} = require('@/middlewares/bcrypt')
 const {exportDocx} = require('@/middlewares/officegen')
+const exportEvaluationSheet = require('@/middlewares/docxtemplater')
 const {schoolYearList, semesterList, weekList, getSchoolYearAndSemester, getSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
 
 
@@ -245,7 +246,9 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
 
 
   // 获取该教师身份，匹配对应的role_taskCount
-  let {role} = await teacherQueryByJobid(jobid)
+  let {role, dean} = await teacherQueryByJobid(jobid)
+  role = '教师'
+  let beEvaluatedNum
   if(role === '教师') { // 若role为'教师'，需要加上被听课次数
     let query = {
       teacher_id: `${jobid},`,
@@ -253,29 +256,36 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
     }
     // let sheet = await evaluationSheetQuery(query)
     let sheet = await evaluationSheetQuery(query, [], {}, ['teacher_id', 'submit_time'])
-    // var beEvaluatedNum = sheet.length
-    var beEvaluatedNum = sheet.count
+    beEvaluatedNum = sheet.count
+  }
+  let ec_submittedReportNum
+  if(dean === 'true') { // 是系主任，则要加上年度报告提交情况
+    let query = {
+      submitter_id: jobid,
+      submit_time: year
+    }
+    let filter = {}
+    let fuzzySearchName = ['submit_time']
+    let annualReport = await annualReportQuery(query, [], filter, fuzzySearchName)
+    ec_submittedReportNum = annualReport.count
   }
   let {count} = await role_taskCountQuery(role)
 
   let schoolYearAndSemester = getSchoolYearAndSemester()
+  // ↓要每学期都来修改，目前两个地方都调用了getSchoolWeek(yyyy,mm,dd)，之后可以再封装一下
   let nowWeek = getSchoolWeek(2021, 2, 24)  // 正常的该学期开学日期，不用改month
 
+  ctx.body = {
+    submittedSheetNum: length,
+    taskCount: count,
+    schoolYearAndSemester,
+    nowWeek
+  }
   if(beEvaluatedNum) {
-    ctx.body = {
-      submittedNum: length,
-      beEvaluatedNum,
-      taskCount: count,
-      schoolYearAndSemester,
-      nowWeek
-    }
-  }else {
-    ctx.body = {
-      submittedNum: length,
-      taskCount: count,
-      schoolYearAndSemester,
-      nowWeek
-    }
+    ctx.body.beEvaluatedNum = beEvaluatedNum
+  }
+  if(ec_submittedReportNum) {
+    ctx.body.submittedReportNum = ec_submittedReportNum
   }
 })
 
@@ -311,11 +321,12 @@ router.get('/getSubmittedSheetList', async (ctx, next) =>{
     submit_time: keyword
   }
   let pagination = [currentPage, pageSize]
-  let filter = ['id', 'class_id', 'course_name', 'classification', 'teacher_name', 'submit_time', 'createdAt']
+  let filter = ['id', 'class_id', 'course_name', 'classification', 'teacher_name', 'submit_time']
   let fuzzySearchName = ['class_id', 'course_name', 'classification', 'teacher_name', 'submit_time']
   let selfORName = ['class_id']
   let orQueryName = ['class_id', 'course_name', 'classification', 'teacher_name', 'submit_time']
-  let eS = await evaluationSheetQuery(query, pagination, filter, fuzzySearchName, selfORName, orQueryName)
+  let order = [['createdAt', 'DESC']]
+  let eS = await evaluationSheetQuery(query, pagination, filter, fuzzySearchName, selfORName, orQueryName, order)
   // let terms = ['id', 'course_name', 'classification', 'teacher_id', 'createdAt']
   // let eS = await evaluationSheetPaginationQuery(jobid, currentPage, pageSize, terms)
 
@@ -335,9 +346,11 @@ router.get('/getSubmittedAnnualReport', async (ctx, next) =>{
     query.submit_time = keyword
   }
   let pagination = [currentPage, pageSize]
-  let filter = {}
+  let filter = ['id', 'report_name', 'submit_time']
   let fuzzySearchName = keyword ? ['submit_time'] : []
-  let aR = await annualReportQuery(query, pagination, filter, fuzzySearchName)
+  let selfORName = []
+  let order = [['createdAt', 'DESC']]
+  let aR = await annualReportQuery(query, pagination, filter, fuzzySearchName, selfORName, order)
 
   ctx.body = aR
 })
@@ -433,7 +446,9 @@ router.get('/downloadEvaluationSheet/:sheet_id', async (ctx, next) => {
   let {submitter, course_name, classification, submit_time} = eSContent
   submit_time = submit_time.replace(/\//g, '')
   let fileName = `${submitter}_${course_name}_${classification}_${submit_time}.docx`
-  await exportDocx(eSContent, fileName)
+
+  // await exportDocx(eSContent, fileName)
+  await exportEvaluationSheet(eSContent, fileName)
   ctx.attachment(fileName)
   await send(ctx, fileName, { root: 'file/evaluationSheet'})
   fs.unlink('file/evaluationSheet/' + fileName, function(err) {
@@ -465,6 +480,7 @@ router.get('/annualReport/:report_id', async (ctx, next) => {
     let fail = '该年度总结报告不存在或没有查询权限哦'
     ctx.body = {fail}
   }
+  // console.log(ctx)
 })
 
 router.get('/getSchoolTime', async (ctx, next) => {
