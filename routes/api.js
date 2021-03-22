@@ -247,7 +247,7 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
 
   // 获取该教师身份，匹配对应的role_taskCount
   let {role, dean} = await teacherQueryByJobid(jobid)
-  role = '教师'
+  // role = '教师'
   let beEvaluatedNum
   if(role === '教师') { // 若role为'教师'，需要加上被听课次数
     let query = {
@@ -444,6 +444,29 @@ router.get('/downloadEvaluationSheet/:sheet_id', async (ctx, next) => {
   let eS = await evaluationSheetQuery(query)
   let eSContent = eS.rows[0]
   let {submitter, course_name, classification, submit_time} = eSContent
+  switch (classification) {
+    case 'theory':
+      classification = '理论课'
+      break;
+    case 'student report':
+      classification = '学生汇报课'
+      break;
+    case 'experiment':
+      classification = '实验课'
+      break;
+    case 'PE':
+      classification = '体育课'
+      break;
+    case 'theory of public welfare':
+      classification = '公益课程理论讲授'
+      break;
+    case 'practice of public welfare':
+      classification = '公益课程服务实践'
+      break;
+    default:
+      classification = 'error'
+      break;
+  }
   submit_time = submit_time.replace(/\//g, '')
   let fileName = `${submitter}_${course_name}_${classification}_${submit_time}.docx`
 

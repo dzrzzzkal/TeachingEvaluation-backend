@@ -15,8 +15,6 @@ const checkToken = require('./checkToken')
 const refreshToken = require('./refreshToken')
 
 // 定义允许直接访问的url
-// const allowPage = ['/login', '/api/login'] // 考虑要不要设置api，以后再说吧
-// const allowPage = ['/', '/dologin', '/onLogin', '/wxdologin', '/json', '/test']  // 待定，因为目前后端的/login都是POST
 const allowPage = require('@/config/allowPage')
 
 
