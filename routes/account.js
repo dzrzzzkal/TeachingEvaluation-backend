@@ -1,25 +1,19 @@
 const router = require('koa-router')()
-// const checkNotLogin = require('@/middlewares/check').checkNotLogin
-// const checkLogin = require('@/middlewares/check').checkLogin
-const md5 = require('md5')
 const send = require('koa-send')
 
 const { userCreate, usernameQuery, userQuery } = require('@/controller/user')
-const {teacherQuery, teacherCreate, teacherQueryByJobid, teacherInfoQuery} = require('@/controller/teacher')
+const {teacherQuery, teacherCreate, teacherInfoQuery} = require('@/controller/teacher')
 const {classCreate} = require('@/controller/class')
 const {courseCreate} = require('@/controller/course')
-const {evaluationSheetCreate, evaluationSheetQuery, evaluationSheetUpdate, evaluationSheetQueryByYear, evaluationSheetPaginationQuery, evaluationSheetQueryIfFinishedProgress} = require('@/controller/evaluationSheet')
+const {evaluationSheetQuery, evaluationSheetUpdate, evaluationSheetQueryIfFinishedProgress} = require('@/controller/evaluationSheet')
 const {role_taskCountQuery} = require('@/controller/role-taskCount')
 const {annualReportQuery} = require('@/controller/annualReport')
 
 const addToken = require('@/token/addToken')
-const checkToken = require('@/middlewares/checkToken')
 const {encrypt, decrypt} = require('@/middlewares/bcrypt')
-const localFilter = require('../../middlewares/localFilter')
+const localFilter = require('../middlewares/localFilter')
 
 const {selectableCollegeAndDeptOptions} = require('@/public/data/selectableCollegeAndDeptOptions')
-const { enc } = require('crypto-js')
-
 
 // 目前登录注册主要参考网址：
 // https://blog.csdn.net/where_slr/article/details/100580730
@@ -172,9 +166,6 @@ router.get('/evaluationSheet/:sheet_id', async (ctx, next) => {
   let myJobid = ctx.response.body.jobid
   let deansofficeRes = await teacherQuery({jobid: myJobid}, [], ['deansoffice', 'college', 'dept'])
   let {deansoffice, college, dept} = deansofficeRes.rows[0].dataValues
-
-  // TEST！！！！！
-  // deansoffice = '教务处'
 
   let maxSearchRangeValue
   if(deansoffice === 'false') {  // deansoffice=false，只能看到'my'

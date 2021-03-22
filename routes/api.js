@@ -6,12 +6,6 @@ const {userQuery, usernameQuery, userJobidQuery} = require('@/controller/user')
 const { wxUserCreate, openidQuery, uidQuery, deleteData } = require('@/controller/wxUser')
 const {teacherQuery, teacherQueryByJobid, teacherInfoQuery} = require('@/controller/teacher')
 const {classQuery, classQueryByTeacherName, classQueryWithCourse, classQueryByClassid} = require('@/controller/class')
-// const {theorySheetCreate, theorySheetQuery, theorySheetQueryByYear, theorySheetPaginationQuery} = require('@/controller/evaluationSheet/theorySheet')
-// const {studentReportSheetCreate, studentReportSheetQuery, studentReportSheetQueryByYear, studentReportSheetPaginationQuery} = require('@/controller/evaluationSheet/studentReportSheet')
-// const {experimentSheetCreate, experimentSheetQuery, experimentSheetQueryByYear, experimentSheetPaginationQuery} = require('@/controller/evaluationSheet/experimentSheet')
-// const {peSheetCreate, peSheetQuery, peSheetQueryByYear, peSheetPaginationQuery} = require('@/controller/evaluationSheet/peSheet')
-// const {theoryOfPublicWelfareSheetCreate, theoryOfPublicWelfareSheetQuery, theoryOfPublicWelfareSheetQueryByYear, theoryOfPublicWelfareSheetPaginationQuery} = require('@/controller/evaluationSheet/theoryOfPublicWelfareSheet')
-// const {practiceOfPublicWelfareSheetCreate, practiceOfPublicWelfareSheetQuery, practiceOfPublicWelfareSheetQueryByYear, practiceOfPublicWelfareSheetPaginationQuery} = require('@/controller/evaluationSheet/practiceOfPublicWelfareSheet')
 const {evaluationSheetCreate, evaluationSheetQuery, evaluationSheetQueryByYear, evaluationSheetPaginationQuery} = require('@/controller/evaluationSheet')
 const {role_taskCountQuery} = require('@/controller/role-taskCount')
 const {annualReportCreate, annualReportQuery} = require('@/controller/annualReport')
@@ -22,7 +16,6 @@ const {decrypt} = require('@/middlewares/bcrypt')
 const {exportDocx} = require('@/middlewares/officegen')
 const exportEvaluationSheet = require('@/middlewares/docxtemplater')
 const {schoolYearList, semesterList, weekList, getSchoolYearAndSemester, getSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
-
 
 const wxAPI = require('@/API/wxAPI')
 
@@ -157,9 +150,6 @@ router.post('/doLogout', async (ctx, next) => {
 router.get('/getCourses', async (ctx, next) => {
   let {user, jobid} = ctx.body  // 获取用户名user、工号jobid
   let {schoolYear, semester} = ctx.request.query
-  // let teacher = user + jobid
-  // let classRes = await classQueryByTeacherName(teacher)
-  // let classRes = await classQueryByTeacherName(user)
   let query = {teacher_name: user, schoolYear, semester}
   let filter = {}
   let fuzzySearchName = ['teacher_name']
@@ -179,7 +169,6 @@ router.get('/getCourses', async (ctx, next) => {
 
 // 格式/class?xx=aaa&yy=bbb
 router.get('/class', async (ctx, next) => {
-  // console.log(ctx.request.query)
   let {keyword, schoolYear, semester} = ctx.request.query
   console.log(schoolYear)
   console.log(semester)
@@ -209,20 +198,6 @@ router.get('/class', async (ctx, next) => {
 router.get('/classid/:classid', async (ctx, next) => {
   let classid = ctx.params.classid
   let res = await classQueryByClassid(classid)
-
-  // let teacherid = res['teacher_id'].split(',')
-  // let teacherinfo = []
-  // // 由于最后一个字符一定是',' 因此最后一个item一定为空，因此不用查询，设为length-1
-  // for(let i = 0; i < teacherid.length-1; i++) {
-  //   console.log('teacherid[i]: ' + teacherid[i])
-  //   let t = await teacherQueryByJobid(teacherid[i])
-  //   teacherinfo.push(t.name)
-  // }
-  // ctx.body = {
-  //   res,nodemon
-  //   teacherinfo
-  // }
-  
   ctx.body = res ? res : {fail: '没有查询到对应的课程信息。'}
 })
 
@@ -240,21 +215,17 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
   let {jobid} = ctx.response.body
   let year = new Date().getFullYear()
 
-  // 这里待改，其实不需要evaluationSHeetQueryByYear,到时参考下面这个evaluationSheetQuery即可
   let eS = await evaluationSheetQueryByYear(jobid, year)
   let length = eS.length
 
-
   // 获取该教师身份，匹配对应的role_taskCount
   let {role, dean} = await teacherQueryByJobid(jobid)
-  // role = '教师'
   let beEvaluatedNum
   if(role === '教师') { // 若role为'教师'，需要加上被听课次数
     let query = {
       teacher_id: `${jobid},`,
       submit_time: year
     }
-    // let sheet = await evaluationSheetQuery(query)
     let sheet = await evaluationSheetQuery(query, [], {}, ['teacher_id', 'submit_time'])
     beEvaluatedNum = sheet.count
   }
@@ -289,7 +260,7 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
   }
 })
 
-// 下载年度评估报告模板
+// 下载年度总结报告模板
 router.get('/downloadAnnualReportTemplate', async (ctx, next) => {
   let fileName = 'annualReportTemplate.docx'
   // Set Content-Disposition to "attachment" to signal the client to prompt for download.
@@ -298,8 +269,6 @@ router.get('/downloadAnnualReportTemplate', async (ctx, next) => {
   // 也可以直接设置 ctx.set("Content-disposition", "attachment; filename=" + fileName);
   ctx.attachment(fileName)
   await send(ctx, fileName, { root: 'public/file'})
-
-  // ctx.response.body='es'
 })
 
 // 小程序页面“我的”中，点击“已评估”，查看评估记录列表（只含部分表内容）
@@ -327,9 +296,6 @@ router.get('/getSubmittedSheetList', async (ctx, next) =>{
   let orQueryName = ['class_id', 'course_name', 'classification', 'teacher_name', 'submit_time']
   let order = [['createdAt', 'DESC']]
   let eS = await evaluationSheetQuery(query, pagination, filter, fuzzySearchName, selfORName, orQueryName, order)
-  // let terms = ['id', 'course_name', 'classification', 'teacher_id', 'createdAt']
-  // let eS = await evaluationSheetPaginationQuery(jobid, currentPage, pageSize, terms)
-
   ctx.body = eS
 })
 
@@ -389,7 +355,6 @@ router.post('/uploadAnnualReport', async (ctx,next)=>{
     filename: function(req, file, cb) {
       let type = file.originalname.split('.')[1]
       // cb(null, `${file.fieldname}-${Date.now().toString(16)}.${type}`)
-      // cb(null, `${file.fieldname}-${Date.now().getFullYear()}${Date.now().getMonth()+1}${Date.now().getDate()}.${type}`)
       fileName = `${fileName}.${type}`
       cb(null, fileName)
     }
@@ -417,7 +382,6 @@ router.post('/uploadAnnualReport', async (ctx,next)=>{
       college,
       dept,
       report_name: fileName,
-      // submit_time: t
       submit_time: time
     }
     await annualReportCreate(annualReportData)
@@ -503,7 +467,6 @@ router.get('/annualReport/:report_id', async (ctx, next) => {
     let fail = '该年度总结报告不存在或没有查询权限哦'
     ctx.body = {fail}
   }
-  // console.log(ctx)
 })
 
 router.get('/getSchoolTime', async (ctx, next) => {
@@ -520,174 +483,3 @@ router.get('/getSchoolTime', async (ctx, next) => {
 })
 
 module.exports = router
-
-
-/**
-   * 理论课程表   实践指导课程表(学生数)
-   * 
-   * 课程信息：
-   * 班号、课程名称、学分、教师、课室、起止周、周几、节次、基本信息
-   *  基本信息：课程代码、旧课程号、开课单位、英文名称、总学时、通识课程、课程分类、课程简介、课程关系
-   *   课程关系：ap（先修课程）、fp（同修课程）
-   * 
-   * 开课班信息：
-   * 班号：班号、课程编号、课程名
-   * 时间：学年、学期、周、周几(xx节)
-   * 教师：教师名
-   * 教室：教室名
-   * 备注：
-   * 选课规则：
-   * 教材：
-   * 上课学生：学生数、学号、姓名、性别、专业、优先数
-   */
-  // let cs = [
-  //   {
-  //     c_id: 115966,
-  //     c_name: '女士形象设计',
-  //     c_credit: 2.0,
-  //     c_teacher: ['LKX'],
-  //     c_classroom: ['E305', '弘毅书院舞蹈房105'],
-  //     c_weeks: '1-16',
-  //     c_time: ['Mon12'],
-  //     // c_day: ['Mon'],
-  //     // c_section: ['67'],
-  //     c_info: {
-  //       c_code: 'ADE6019A',
-  //       c_oldcode: 'ADE6019A',
-  //       c_unit: '艺术设计系',
-  //       c_en_name: "Ladies'Image Design",
-  //       c_hours: 32,
-  //       c_generalCourse: true,
-  //       c_classification: '理论讲授',
-  //       c_brief: {
-  //         intro: '形象设计的重要性源自第一印象的重要性。在竞争日益激烈的今天，形象力与体力、智力并列为人生的三大资本，对个人前途和事业的发展有着不可忽视的重要作用，良好的形象是成功人生的开端。一个人的整体形象可以彰显个人、企业甚至国家的文化。好的形象对己可以增强自信，并通过美的外表及行为来塑造美的内心；对外可以赢得他人信任和好感，吸引他人的帮助和支持，从而促进自己事业的成功与人生的顺达。',
-  //         file: '下载课程大纲文件 .doc文件'
-  //       },
-  //       c_relationship: {
-  //         c_ap: '',
-  //         c_fp: ''
-  //       }
-  //     }
-  //   },
-  //   {
-  //     c_id: 117553,
-  //     c_name: '并行程序设计',
-  //     c_credit: 2.0,
-  //     c_teacher: ['XZ'],
-  //     c_classroom: ['E207'],
-  //     c_weeks: '1-16',
-  //     c_time: ['Mon89'],
-  //     // c_day: ['Mon'],
-  //     // c_section: ['89'],
-  //     c_info: {
-  //       c_code: 'CST3256A',
-  //       c_oldcode: 'CST9043',
-  //       c_unit: '计算机系',
-  //       c_en_name: "Parallel Programming",
-  //       c_hours: 32,
-  //       c_generalCourse: false,
-  //       c_classification: '理论讲授',
-  //       c_brief: {
-  //         intro: '',
-  //         file: '下载课程大纲文件 .doc文件'
-  //       },
-  //       c_relationship: {
-  //         c_ap: '',
-  //         c_fp: ''
-  //       }
-  //     }
-  //   },
-  //   {
-  //     c_id: 117547,
-  //     c_name: '计算机网络',
-  //     c_credit: 4.0,
-  //     c_teacher: ['蔡伟鸿', '林泽铭(实验)'],
-  //     c_classroom: ['讲堂六'],
-  //     c_weeks: '1-16',
-  //     c_time: ['Mon345', 'Thur67'],
-  //     // c_day: ['Mon', 'Thur'],
-  //     // c_section: ['34', '67'],
-  //     c_info: {
-  //       c_code: 'CST3402A',
-  //       c_oldcode: 'CST3402A',
-  //       c_unit: '计算机系',
-  //       c_en_name: "Computer Networks",
-  //       c_hours: 64,
-  //       c_generalCourse: false,
-  //       c_classification: '理论讲授',
-  //       c_brief: {
-  //         intro: '',
-  //         file: '下载课程大纲文件 .doc文件'
-  //       },
-  //       c_relationship: {
-  //         c_ap: '',
-  //         c_fp: ''
-  //       }
-  //     }
-  //   },
-  //   {
-  //     c_id: 116151,
-  //     c_name: '生物多样性与人类福祉',
-  //     c_credit: 2.0,
-  //     c_teacher: ['ZHP'],
-  //     c_classroom: ['D座302'],
-  //     c_weeks: '1-16',
-  //     c_time: ['Thur34'],
-  //     // c_day: ['Thur'],
-  //     // c_section: ['34'],
-  //     c_info: {
-  //       c_code: 'MBI6250A',
-  //       c_oldcode: 'MBI6250A',
-  //       c_unit: '海洋生物研究所',
-  //       c_en_name: "The biodiversity and Human Welfare",
-  //       c_hours: 32,
-  //       c_generalCourse: true,
-  //       c_classification: '理论讲授',
-  //       c_brief: {
-  //         intro: '',
-  //         file: '下载课程大纲文件 .doc文件'
-  //       },
-  //       c_relationship: {
-  //         c_ap: '',
-  //         c_fp: ''
-  //       }
-  //     }
-  //   },
-  //   {
-  //     c_id: 119411,
-  //     c_name: '突发性疫情认知、防护与思考（网络课程）',
-  //     c_credit: 1.0,
-  //     c_teacher: ['江松琦(助教)'],
-  //     c_classroom: ['*'],
-  //     c_weeks: '1-16',
-  //     c_time: [],
-  //     // c_day: [],
-  //     // c_section: [],
-  //     c_info: {
-  //       c_code: 'OLC1028A',
-  //       c_oldcode: 'OLC1028A',
-  //       c_unit: '汕头大学',
-  //       c_en_name: "Cognition,Prevention and Thought of Emergency Epidemic(Online Course)",
-  //       c_hours: 16,
-  //       c_generalCourse: true,
-  //       c_classification: '理论讲授',
-  //       c_brief: {
-  //         intro: '',
-  //         file: '下载课程大纲文件 .doc文件'
-  //       },
-  //       c_relationship: {
-  //         c_ap: '',
-  //         c_fp: ''
-  //       }
-  //     }
-  //   },
-  //   {
-  //     c_id: 119863,
-  //     c_code: 'CST3855A',
-  //     c_oldcode: 'CST8105',
-  //     c_name: '[CST3855A]ACM程序设计竞赛[CST8105]',
-  //     c_subject_name: 'ACM程序设计竞赛',
-  //     c_teacher: ['陈夏铭', '陈银冬', '许建龙'],
-  //     c_weeks: '1-16',
-  //   },
-  // ]

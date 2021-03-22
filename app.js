@@ -1,6 +1,5 @@
 const Koa = require('koa')
 const app = new Koa()
-const views = require('koa-views')
 const json = require('koa-json')
 const onerror = require('koa-onerror')
 const bodyparser = require('koa-bodyparser')
@@ -21,11 +20,8 @@ const config = require('./config/config')
 const localFilter = require('./middlewares/localFilter')
 
 const index = require('./routes/index')
-const users = require('./routes/users')
-const admin = require('./routes/admin')
 const api = require('./routes/api')
-const adminAccount = require('./routes/admin/account')
-const register = require('./routes/admin/account/register')
+const adminAccount = require('./routes/account')
 
 // error handler
 onerror(app)
@@ -174,17 +170,17 @@ storeAccessToken()
 
 
 // 404中间件（貌似可删）
-// app.use(async (ctx, next) => {
-//   // console.log('这是一个中间件')
-//   await next()
+app.use(async (ctx, next) => {
+  // console.log('这是一个中间件')
+  await next()
 
-//   if(ctx.status == 404) {
-//     ctx.status = 404
-//     ctx.body = '这是一个404页面'
-//   }else {
-//     console.log(ctx.url)
-//   }
-// })
+  if(ctx.status == 404) {
+    ctx.status = 404
+    ctx.body = '这是一个404页面'
+  }else {
+    console.log(ctx.url)
+  }
+})
 
 
 // logger
@@ -197,11 +193,8 @@ app.use(async (ctx, next) => {
 
 // routes
 app.use(index.routes(), index.allowedMethods())
-app.use(users.routes(), users.allowedMethods()) // 不要的
-app.use(admin.routes(), admin.allowedMethods())
-app.use(api.routes(), api.allowedMethods())
-app.use(adminAccount.routes(), adminAccount.allowedMethods())
-app.use(register.routes(), register.allowedMethods()) // 不要的
+app.use(api.routes(), api.allowedMethods()) // 小程序
+app.use(adminAccount.routes(), adminAccount.allowedMethods()) // 网页管理
 
 // error-handling
 app.on('error', (err, ctx) => {

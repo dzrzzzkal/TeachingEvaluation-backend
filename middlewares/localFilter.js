@@ -63,7 +63,8 @@ const localFilter = async (ctx) => {
       console.log('无token')
       // 无token这里，app.use()拦截后的ctx.response.body = undefined，不知道为什么
       // 也不知道会不会有bug，等看补不补充后端的'/login'再说吧
-      ctx.redirect('/json')
+      // ctx.redirect('/json')
+      ctx.redirect('/404')
     }
     /**
      * ！！！！！！！！！！！不能删！！！！！！！
