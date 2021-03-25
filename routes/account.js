@@ -12,6 +12,7 @@ const {annualReportQuery} = require('@/controller/annualReport')
 const addToken = require('@/token/addToken')
 const {encrypt, decrypt} = require('@/middlewares/bcrypt')
 const localFilter = require('../middlewares/localFilter')
+const {submittedAnnualReport, notSubmitAnnualReport} = require('../middlewares/findAnnualReportSubmitter')
 
 const {selectableCollegeAndDeptOptions} = require('@/public/data/selectableCollegeAndDeptOptions')
 
@@ -115,11 +116,6 @@ router.post('/checkToken', async (ctx, next) => {
   // ↓返回的是一个请求，只是根据不同情况可能修改了里面的ctx.response.body
   let returnCtx = await localFilter(ctx)
   ctx.body = returnCtx.response.body
-})
-
-router.post('/test', async (ctx, next) =>{
-  
-  ctx.body = {status: true}
 })
 
 router.post('/create-course', async (ctx, next) => {
@@ -237,42 +233,9 @@ router.get('/evaluationSheet/:sheet_id', async (ctx, next) => {
   }
 })
 
-router.get('/es', async (ctx, next) => {
-  console.log('这里是es')
-  
-
-  // let {jobid} = ctx.response.body
-  // let year = new Date().getFullYear()
-
-  // // 这里待改，其实不需要evaluationSHeetQueryByYear,到时参考下面这个evaluationSheetQuery即可
-  // let eS = await evaluationSheetQueryByYear(jobid, year)
-  // let length = eS.length
-  // await exportDocx(eS[1])
-
-  
-
-  // const path = '../../public/evaluationSheet1.docx';
-  // ctx.set("Content-disposition", "attachment; filename=" + path)
-  // ctx.attachment(path);
-  // await send(ctx, path)
-
-  var fileName = 'evaluationSheet1.docx'
-    // Set Content-Disposition to "attachment" to signal the client to prompt for download.
-    // Optionally specify the filename of the download.
-    // 设置实体头（表示消息体的附加信息的头字段）,提示浏览器以文件下载的方式打开
-    // 也可以直接设置 ctx.set("Content-disposition", "attachment; filename=" + fileName);
-    ctx.attachment(fileName)
-    await send(ctx, fileName, { root: __dirname})
-
-
-  // ctx.response.body='es'
-})
-
-
 // 查询评估进度
 router.post('/evaluationProgress', async (ctx, next) => {
   let myJobid = ctx.response.body.jobid
-
   let currentPage = parseInt(ctx.request.body.currentPage)
   let pageSize = parseInt(ctx.request.body.pageSize)
   let {searchRangeValue, searchItem, schoolYearItem, input} = ctx.request.body // string
@@ -284,8 +247,6 @@ router.post('/evaluationProgress', async (ctx, next) => {
   let deansofficeRes = await teacherQuery({jobid: myJobid}, [], ['deansoffice', 'college', 'dept'])
   let {deansoffice, college, dept} = deansofficeRes.rows[0].dataValues
   let maxSearchRangeValue
-
-  // TEST
   // deansoffice = '教务处'
 
   if(deansoffice === 'false') {  // deansoffice=false，只能看到'my'
@@ -395,7 +356,7 @@ router.post('/evaluationProgress', async (ctx, next) => {
       // }
       var deansofficeQueryableEP = {
         range: deansofficeQueryableStr,
-        notFinishedCount: 0,
+        finishedCount: 0,
         teacherTotal: 0
       }
     }else {
@@ -422,25 +383,25 @@ router.post('/evaluationProgress', async (ctx, next) => {
         }
         queryContent.push(queryItem)
       }
-      let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, '<')
-      allQueryableNotFinishedTeacher = queryRes
-      for(let nft of allQueryableNotFinishedTeacher.rows) {
-        let nftItem = nft
+      let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, '>=')
+      allQueryableFinishedTeacher = queryRes
+      for(let ft of allQueryableFinishedTeacher.rows) {
+        let ftItem = ft
         for(let t of allQueryableTeacherinfo.rows) {
           let tItem = t.dataValues
-          if(nftItem.jobid === tItem.jobid) {
+          if(ftItem.jobid === tItem.jobid) {
             for(let attr in tItem) {
               let attrContent = tItem[attr]
-              nftItem[attr] = attrContent
+              ftItem[attr] = attrContent
             }
           }
         }
       }
-      let allQueryableNotFinishedTeacherCount = allQueryableNotFinishedTeacher.count
+      let allQueryableFinishedTeacherCount = allQueryableFinishedTeacher.count
 
       var deansofficeQueryableEP = {
         range: deansofficeQueryableStr,
-        notFinishedCount: allQueryableNotFinishedTeacherCount,
+        finishedCount: allQueryableFinishedTeacherCount,
         teacherTotal: allQueryableTeacherCount
       }
     }
@@ -501,21 +462,13 @@ router.post('/evaluationProgress', async (ctx, next) => {
   }
   query = {jobid: jobids}
   selfORName = ['jobid']
-  console.log('jobids: ')
-  console.log(jobids)
 
   // 如果输入有input，即需要先模糊查找 教师工号 / 姓名 / 角色 = input。
   // 这样先筛选出符合条件的teacher，再考虑searchItem的'完成评估任务'、'未完成评估任务'等。
   if(input) {
-    // query中增加一个or 查询jobid/name/role
-    // query.jobid = input
-    // query.name = input
-    // query.role = input
-    // orQueryName = ['jobid', 'name', 'role']
-    // fuzzySearchName.push('jobid', 'name', 'role')
     query = {
       setQuery: 'searchEvaluationProgressIncludeSearchRange&input',
-      query,
+      query,  // query中也包含jobid属性
       or: {
         jobid: input,
         name: input,
@@ -526,7 +479,6 @@ router.post('/evaluationProgress', async (ctx, next) => {
 
   // PS：如果是默认查询，会查询范围内的所有教师的jobid
   filter = ['jobid', 'name', 'role', 'dean', 'deansoffice', 'college', 'dept']
-  // let teacherinfo = await teacherQuery(query, pagination, filter, fuzzySearchName, selfORName)
   let teacherinfo
   // jobids为空(jobids=[])。例如可能上面通过searchRangeValue的范围没有教师(例如查询的某个系没有教师)，也可能是查询范围为全校，需要进行区分。第一种情况直接设置teacherinfo=[]
   if(!jobids.length && schoolRangeSearch === false){  // 如果jobids=[] 会导致 query=={[]} 即where:{}，没有任何查询条件，会返回所有数据
@@ -540,9 +492,9 @@ router.post('/evaluationProgress', async (ctx, next) => {
       teacherinfo = await teacherQuery(query, pagination, filter, fuzzySearchName, selfORName, orQueryName)
     }
   }
-  // console.log(teacherinfo)
 
   let ep = {}
+  let arp = {}
   if(!teacherinfo.rows || !teacherinfo.rows.length) { // teacherinfo格式为{count: x, rows: ['xxx']}，若查询不到对应teacher，则此时{count: 0, rows: []}
     ep = {
       count: 0,
@@ -572,9 +524,6 @@ router.post('/evaluationProgress', async (ctx, next) => {
         }
         queryContent.push(queryItem)
       }
-      // console.log('queryContent: ')
-      // console.log(queryContent)
-      // var query = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, '<', 1, 10)
       let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
       ep = queryRes
       for(let q of ep.rows) {
@@ -625,9 +574,11 @@ router.post('/evaluationProgress', async (ctx, next) => {
         }
       }
     }else if(searchItem === 'submittedAnnualReport') {
-      // 待完成！！！！！！！！！！！！！！！！！！！
+      let aRPagination = [currentPage, pageSize]
+      arp = await submittedAnnualReport(schoolYear, teacherinfo, aRPagination)
     }else if(searchItem === 'notSubmitAnnualReport') {
-      // 待完成！！！！！！！！！！！！！！！！！！！
+      let aRPagination = [currentPage, pageSize]
+      arp = await notSubmitAnnualReport(schoolYear, teacherinfo, aRPagination)
     }
   }
   else {  // teacherinfo 不为空，且不需要筛选'已完成评估'、'未完成评估'等
@@ -640,9 +591,9 @@ router.post('/evaluationProgress', async (ctx, next) => {
     ep = teacherinfo
     for(let i of ep.rows) {
       let item = i.dataValues
-      let {jobid, role} = item
-      // let es1 = await evaluationSheetQuery({submitter_id: jobid}, [], ['id'])  // 其实['id']是没必要的，由于目的是获得长度而已，想让获取数据少一点而已
+      let {jobid, role, dean} = item
       esQuery = {submitter_id: jobid, submit_time: schoolYear}
+      esFilter = ['id']
       esFuzzySearchName = ['submit_time']
       let queryRes = await evaluationSheetQuery(esQuery, esPagination, esFilter, esFuzzySearchName, esSelfORName, esGroupQuery)
       let submittedNum = queryRes.count
@@ -650,21 +601,37 @@ router.post('/evaluationProgress', async (ctx, next) => {
       let {count} = await role_taskCountQuery(role)
       item.taskCount = count
       if(role === '教师') {
-        // let es2 = await evaluationSheetQuery({teacher_id: jobid}, [], ['id'], ['teacher_id'])
         esQuery = {teacher_id: jobid, submit_time: schoolYear}
+        esFilter = ['id']
         esFuzzySearchName = ['teacher_id', 'submit_time']
         let tQueryRes = await evaluationSheetQuery(esQuery, esPagination, esFilter, esFuzzySearchName, esSelfORName, esGroupQuery)
-        let beEvaluatedNum = tQueryRes.count
-        item.beEvaluatedNum = beEvaluatedNum
+        item.beEvaluatedNum = tQueryRes.count
+      }
+      if(dean === 'true') {
+        let arQ = {
+          submitter_id: jobid,
+          submit_time: schoolYear
+        }
+        let arFSN = ['submit_time']
+        let arQueryRes = await annualReportQuery(arQ, [], ['submitter_id'], arFSN)
+        item.aRSubmittedNum = arQueryRes.count
       }
     }
   }
 
-  ctx.body = {
-    selectRangeOptions,
-    // teacherinfo,
-    ep,
-    deansofficeQueryableEP
+  if(searchItem === 'submittedAnnualReport' || searchItem === 'notSubmitAnnualReport') {
+    ctx.body = {
+      selectRangeOptions,
+      arp,
+      deansofficeQueryableEP
+    }
+  }else {
+    ctx.body = {
+      selectRangeOptions,
+      // teacherinfo,
+      ep,
+      deansofficeQueryableEP
+    }
   }
 })
 
@@ -747,8 +714,6 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
   }
   query = {jobid: jobids}
   selfORName = ['jobid']
-  console.log('jobids: ')
-  console.log(jobids)
 
   if(input) {
     query = {
@@ -775,6 +740,7 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
   }
 
   let ep = {}
+  let arp = {}
   if(!teacherinfo.rows || !teacherinfo.rows.length) { // teacherinfo格式为{count: x, rows: ['xxx']}，若查询不到对应teacher，则此时{count: 0, rows: []}
     ep = {
       count: 0,
@@ -857,9 +823,11 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
         }
       }
     }else if(searchItem === 'submittedAnnualReport') {
-      // 待完成！！！！！！！！！！！！！！！！！！！
+      let aRPagination = [currentPage, pageSize]
+      arp = await submittedAnnualReport(schoolYear, teacherinfo, aRPagination)
     }else if(searchItem === 'notSubmitAnnualReport') {
-      // 待完成！！！！！！！！！！！！！！！！！！！
+      let aRPagination = [currentPage, pageSize]
+      arp = await notSubmitAnnualReport(schoolYear, teacherinfo, aRPagination)
     }
   }
   else {  // teacherinfo 不为空，且不需要筛选'已完成评估'、'未完成评估'等
@@ -874,6 +842,7 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
       let item = i.dataValues
       let {jobid, role} = item
       esQuery = {submitter_id: jobid, submit_time: schoolYear}
+      esFilter = ['id']
       esFuzzySearchName = ['submit_time']
       let queryRes = await evaluationSheetQuery(esQuery, esPagination, esFilter, esFuzzySearchName, esSelfORName, esGroupQuery)
       let submittedNum = queryRes.count
@@ -882,6 +851,7 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
       item.taskCount = count
       if(role === '教师') {
         esQuery = {teacher_id: jobid, submit_time: schoolYear}
+        esFilter = ['id']
         esFuzzySearchName = ['teacher_id', 'submit_time']
         let tQueryRes = await evaluationSheetQuery(esQuery, esPagination, esFilter, esFuzzySearchName, esSelfORName, esGroupQuery)
         let beEvaluatedNum = tQueryRes.count
@@ -890,10 +860,15 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
     }
   }
 
-  // ctx.body = {
-  //   ep
-  // }
-  ctx.body = ep.rows
+  if(searchItem === 'submittedAnnualReport' || searchItem === 'notSubmitAnnualReport') {
+    ctx.body = {
+      arp: arp.rows
+    }
+  }else {
+    ctx.body = {
+      ep: ep.rows
+    }
+  }
 })
 
 router.post('/evaluationSheetList', async (ctx, next) => {

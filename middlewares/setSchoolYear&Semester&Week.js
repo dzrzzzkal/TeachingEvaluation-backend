@@ -5,7 +5,7 @@ const schoolYearList = ['2018-2019年', '2019-2020年', '2020-2021年', '2021-20
 const semesterList = ['春季学期', '夏季学期', '秋季学期']
 const weekList = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16']
 
-const getSchoolYearAndSemester = () => {
+const setSchoolYearAndSemester = () => {
   // 根据当前日期设置学年和学期
   let thisYear = new Date().getFullYear()
   let thisMonth = new Date().getMonth() + 1
@@ -37,18 +37,20 @@ const getSchoolYearAndSemester = () => {
   }
 }
 
-// 输入当前学期的起始日期。根据输入的year, month, day，判断当日是该学期的第几周
-// dateObject.setFullYear(year,month,day)
-const getSchoolWeek = (year, month, day) => { // setFullYear的month: 0-11，但是输入的month是正常日期的month，因此下面的month参数都-1
+// 输入当前学期的起始日期。再转成year, month, day，判断当日是该学期的第几周
+const setSchoolWeek = (date) => { // '2021-2-24'
+  let year = parseInt(date.split('-')[0])
+  let month = parseInt(date.split('-')[1]) - 1  // setFullYear的month: 0-11，但是输入的month是正常日期的month，因此month-1
+  let day = parseInt(date.split('-')[2])
   var d = new Date()
   // d.setFullYear(d.getFullYear(),0,1);  // 定义变量d为当年的1月1日0点
-  d.setFullYear(year, month - 1, day)
+  d.setFullYear(year, month, day)
   var weekday = d.getDay()  // 定义day为当年1月1日的星期数(0为星期天,1为星期1,6为星期6)
   // 定义fistweekleft为第一周bai剩余的天数,此处认为星期一是一周的第一天，如果将星期天定义为一周的第一天，请写成fistweekleft = (6-day)%6
   var firstweekleft = (7-weekday)%7;
   // 将d赋值为第二周的第一天,1+fistweekleft号为第一周最后天，1+fistweekleft+1为第二周第一天
   // d.setFullYear(d.getFullYear(),0,1+fistweekleft+1);
-  d.setFullYear(year, month - 1, day + firstweekleft + 1)
+  d.setFullYear(year, month, day + firstweekleft + 1)
   // 定义变量d1为当天
   var d1 = new Date()
   // 当前时间与当年第二周第一天的毫秒数之差除以一周的毫秒数并取整即为当前日期距本的第二周已过的周数
@@ -61,4 +63,12 @@ const getSchoolWeek = (year, month, day) => { // setFullYear的month: 0-11，但
   return nowWeek
 }
 
-module.exports = {schoolYearList, semesterList, weekList, getSchoolYearAndSemester, getSchoolWeek}
+const getSchoolYearAndSemester = () =>{
+  return global.schoolTime.schoolYearAndSemester
+}
+
+const getSchoolWeek = (ctx) => {
+  return global.schoolTime.nowSchoolWeek
+}
+
+module.exports = {schoolYearList, semesterList, weekList, setSchoolYearAndSemester, setSchoolWeek, getSchoolYearAndSemester, getSchoolWeek}

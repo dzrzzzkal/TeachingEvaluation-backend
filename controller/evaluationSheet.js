@@ -1,6 +1,9 @@
 const {EvaluationSheet} = require('@/models/index')
+const {QueryTypes} = require('sequelize')
+const sequelize = require('@/controller/mysql') // 导入实例化sequelize
 const {Op} = require('sequelize')
 const $or = Op.or
+const $like = Op.like
 
 // 关联对象 保存 实例
 // 待看：https://blog.csdn.net/yaodong379/article/details/97621301
@@ -33,8 +36,8 @@ exports.evaluationSheetCreate = async (evaluationSheetinfo) => {
  * @param {Object} query 查询条件
  * @param {Array} pagination 分页查询条件。pagination[0]: currentPage, pagination[1]: pageSize。数组元素均为integer类型
  * @param {Array or Object} filter 过滤(返回)出来的条件，若参数为空或为{} 则返回全部列对应的元素 。一般格式：[] / {include:[], exclude:[]}
- * @param {array} fuzzySearchName 包含需要进行模糊搜索的对象的名称的数组，数组元素均为字符串string类型
- * @param {array} selfORName 包含某个属性自身需要OR的属性名（例如:submitter_id为xx or yy）的数组。数组元素均为字符串string类型。
+ * @param {Array} fuzzySearchName 包含需要进行模糊搜索的对象的名称的数组，数组元素均为字符串string类型
+ * @param {Array} selfORName 包含某个属性自身需要OR的属性名（例如:submitter_id为xx or yy）的数组。数组元素均为字符串string类型。
  * （↑ PS:该属性的值在query中要为数组类型。）
  * @param {Array} orQueryName 包含需要OR的某些属性的属性名（例如:submitter_id:xx or submitter:yy）的数组。数组元素均为字符串string类型。
  * @param {Array} order 排序
@@ -97,7 +100,7 @@ exports.evaluationSheetQuery = async (query, pagination, filter, fuzzySearchName
       let attrName = fuzzySearchName[i]
       let attrContent = query[attrName]
       query[attrName] = {
-        [Op.like]: `%${attrContent}%`
+        [$like]: `%${attrContent}%`
       }
     }
   }
@@ -168,7 +171,7 @@ exports.evaluationSheetQueryByYear = async (submitter_id, year) => {
     where: {
       submitter_id,
       submit_time: {
-        [Op.like]: `%${year}%`
+        [$like]: `%${year}%`
       }
     }
   })
@@ -206,6 +209,7 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
   let submitter_idStr = ''  // 用于 若查询的是'未完成'。选出在schoolYear当年没有提交过evaluationSheet的teacher，且submitter_id在query中的
   let whereStr = ""
   if(rangeSymbol.indexOf('>') === -1) { // 没有'>'，即有'<'(输入时参数不输入'=')。查询'未完成评估任务'
+    var queryJobidsStr = ''
     for(let i in query) {
       // 加上了年份 where submit_time like '%schoolYear%' AND 
       if(!query[i].teacher_id) {
@@ -217,12 +221,19 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
         + "submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%' AND ` 
         + "submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%'` + " AND submitter_id=" + `'${query[i].submitter_id}' ` + "GROUP BY submitter_id HAVING COUNT(submitter_id)" + rangeSymbol + query[i].taskCount + ")"
         + " OR " 
-        + "submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%'` + " AND submitter_id IN (SELECT DISTINCT " + `'${query[i].submitter_id}'` + " as t_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%'` + " AND teacher_id like " + `'%${query[i].teacher_id},%'` + "HAVING COUNT(teacher_id) = 0))) "
+        // + "submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%'` + " AND submitter_id IN (SELECT DISTINCT " + `'${query[i].submitter_id}'` + " as t_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%'` + " AND teacher_id like " + `'%${query[i].teacher_id},%'` + "HAVING COUNT(teacher_id) = 0))) "
+        + "submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%'` + " AND submitter_id IN (SELECT DISTINCT " + `'${query[i].submitter_id}'` + " as t_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%'` + " AND teacher_id like " + `'%${query[i].teacher_id},%'` + "HAVING COUNT(teacher_id) < 1))) "
       }
       submitter_idStr = submitter_idStr + `'${query[i].submitter_id}'`
       if(parseInt(i) !== query.length - 1) {
         whereStr = whereStr + " OR "
         submitter_idStr = submitter_idStr + ','
+      }
+
+      // 输入的jobids，这里写成用来查询的str
+      queryJobidsStr = queryJobidsStr + `jobid = '${query[i].submitter_id}'`
+      if(i != query.length - 1) {
+        queryJobidsStr = queryJobidsStr + ' OR '
       }
     }
   }else { // 查询'已完成评估任务'
@@ -245,27 +256,55 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
     }
   }
 
-  // let mysqlQuery = 
-  // "SELECT submitter_id as jobid, COUNT(*) as submittedNum, COUNT(1) OVER() as total FROM `evaluation-sheet` WHERE " + whereStr + ' GROUP BY submitter_id ' + `LIMIT ${limit}, ${pageSize}`
-  // 原本是使用上面这个mysqlQuery，但是发现即使whereStr中全加入'WHERE submit_time like'，并且尝试改成了 'WHERE submit_like AND' + whereStr，实际效果是有包含schoolYear筛选的，即分类'已完成''未完成'正确，但是count(*)并没有进行schoolYear筛选。
-  // 因此最后采用下面的mysqlQuery，相当于把上面的mysqlQuery作为条件塞进另一条包含筛选schoolYear的语句中。这个mq和上面的mysqlQuery差不多的。
   let mq = "SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%' AND ` + whereStr
   let mysqlQuery = 
   "SELECT submitter_id as jobid, COUNT(*) as submittedNum, COUNT(1) OVER() as total FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%' ` + " AND submitter_id in (" + mq + ") " 
-  if(rangeSymbol.indexOf('>') === -1) {
-    mysqlQuery = mysqlQuery
+  if(rangeSymbol.indexOf('>') === -1) { // 查询未完成听课任务。先用teacher表查询所有未完成听课任务的教师的jobid，再去查询具体进度
+    // mysqlQuery = mysqlQuery
+    // + "OR submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submitter_id IN" + ` (${submitter_idStr}) AND` + " submitter_id NOT IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%')) `
+
+    // mysqlQuery = 
+    // "SELECT jobid from `teacher` WHERE (jobid NOT IN (SELECT DISTINCT submitter_id FROM `evaluation-sheet`) OR jobid IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%' ` + " AND submitter_id in (" + mq + ") "
+    // // 若查询的是'未完成'。↓选出在schoolYear当年没有提交过evaluationSheet的teacher，但是从这里返回的submittedNum和beEvaluatedNum是总数据的查询结果。而实际上由于该submitter_id在schoolYear没提交过，因此必定submittedNum=0
+    // + "OR submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submitter_id IN" + ` (${submitter_idStr}) AND` + " submitter_id NOT IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%')) `
+
+    mysqlQuery = 
+    "SELECT jobid from `teacher` WHERE ("
+    + queryJobidsStr
+    +") AND (jobid NOT IN (SELECT DISTINCT submitter_id FROM `evaluation-sheet`) OR jobid IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%' ` + " AND submitter_id in (" + mq + ") "
     // 若查询的是'未完成'。↓选出在schoolYear当年没有提交过evaluationSheet的teacher，但是从这里返回的submittedNum和beEvaluatedNum是总数据的查询结果。而实际上由于该submitter_id在schoolYear没提交过，因此必定submittedNum=0
     + "OR submitter_id IN (SELECT distinct submitter_id FROM `evaluation-sheet` WHERE submitter_id IN" + ` (${submitter_idStr}) AND` + " submitter_id NOT IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like " + `'%${schoolYear}%')) `
   }
   mysqlQuery = mysqlQuery + "GROUP BY submitter_id"
+  if(rangeSymbol.indexOf('>') === -1) { // 未完成听课
+    mysqlQuery = mysqlQuery + '))'
+  }
   if(currentPage && pageSize) {
     let limit = (currentPage - 1) * pageSize
     mysqlQuery = mysqlQuery + ` LIMIT ${limit}, ${pageSize}`
   }
   let r = await sequelize.query(mysqlQuery, { type: QueryTypes.SELECT })
 
-  let notInTeacherMysql = "SELECT submitter_id FROM `evaluation-sheet` WHERE submitter_id NOT IN (SELECT submitter_id FROM `evaluation-sheet` WHERE submit_time like '%2021%')"
-  let notInTeacher = await sequelize.query(notInTeacherMysql, { type: QueryTypes.SELECT })
+  if(rangeSymbol.indexOf('>') === -1) { // 未完成听课
+    let queryResJobids = []
+    r.map((item, index) => {
+      queryResJobids.push({submitter_id: item.jobid})
+    })
+
+    // 未完成听课中 该schoolYear有提交过evaluation-sheet
+    var submittedNumRes = await EvaluationSheet.findAndCountAll({
+      attributes: ['submitter_id'],
+      where: {
+        [$or]: queryResJobids,
+        submit_time: {
+          [$like]: `%${schoolYear}%`
+        }
+      },
+      group: 'submitter_id'
+    })
+    console.log('submittedNumReslllllllllllllllllllll')
+    console.log(submittedNumRes)
+  }
 
   let count = 0
   // 查询不到值时，r: []，因此不能用if(r)
@@ -275,10 +314,19 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
   // 修改一下输出的数据格式。写入taskCount，写入"教师"的被听课次数。因为上面完整查询语句mysqlQuery无法写入次数
   for(let i of r) {
     delete i.total
-    for(let k of notInTeacher) {
-      if(i.jobid === k.submitter_id) {  // 是schoolYear没有提交过评估表的teacher，这里设置submittedNum=0
-        let submittedNum = 0
-        i.submittedNum = submittedNum
+    if(rangeSymbol.indexOf('>') === -1) { // 未完成听课
+      for(let k = 0; k < submittedNumRes.rows.length; k++) {
+        console.log(k)
+        let submittedNum = submittedNumRes.count[k].count
+        let submittedNumItem = submittedNumRes.rows[k].dataValues
+        console.log(submittedNumItem)
+        if(i.jobid === submittedNumItem.submitter_id) {  // 该jobid是该schoolYear下evaluation-sheet中有的
+          i.submittedNum = submittedNum
+          break
+        }
+      }
+      if(!i.submittedNum) { // 该jobid是该schoolYear下evaluation-sheet中无的
+        i.submittedNum = 0
       }
     }
     for(let j of query) {
@@ -302,8 +350,6 @@ exports.evaluationSheetQueryIfFinishedProgress = async (query, schoolYear, range
 
 // ————————————↓这部分是做已/未完成评估时弄出来的，实际上没有被用到。先放着，可能后续会参考————————————————————————
 
-const {QueryTypes} = require('sequelize')
-const sequelize = require('@/controller/mysql') // 导入实例化sequelize
 // exports.evaluationSheetRawQuery = async (taskCount) => {
 //   let mysqlQuery = "SELECT COUNT(*) FROM `evaluation-sheet` WHERE submitter_id IN (SELECT submitter_id FROM `evaluation-sheet` GROUP BY submitter_id HAVING COUNT(submitter_id) >= " + taskCount + ")"
 //   return await sequelize.query(mysqlQuery, { type: QueryTypes.SELECT })

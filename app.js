@@ -18,6 +18,7 @@ require('module-alias/register')
 
 const config = require('./config/config')
 const localFilter = require('./middlewares/localFilter')
+const {schoolYearList, semesterList, weekList, setSchoolYearAndSemester, getSchoolYearAndSemester, setSchoolWeek, getSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
 
 const index = require('./routes/index')
 const api = require('./routes/api')
@@ -45,16 +46,13 @@ app.use(staticCache(path.join(__dirname, './images'), {dynamic: true}, {
   maxAge: 365*24*60*60
 }))
 
-// app.use(views(__dirname + '/views', {
-//   extension: 'pug'
-// }))
-
-// 配置 koa-art-template模板引擎
-render(app, {
-  root: path.join(__dirname, 'views'), //视图的位置
-  extname: '.html',  //默认 .art后缀名
-  debug: process.env.NODE_ENV !== 'production'  //是否开启调试模式
-})
+// 设置当前学年、学期、学周等
+// ↓要每学期都来修改，目前两个地方都用到了
+let semesterStartDate = '2021-2-24' // // 正常的该学期开学日期，这里不用改month
+global.schoolTime = {
+  schoolYearAndSemester: setSchoolYearAndSemester(),
+  nowSchoolWeek: setSchoolWeek(semesterStartDate),
+}
 
 /**
   // 配置koa-session的中间件

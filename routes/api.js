@@ -170,8 +170,6 @@ router.get('/getCourses', async (ctx, next) => {
 // 格式/class?xx=aaa&yy=bbb
 router.get('/class', async (ctx, next) => {
   let {keyword, schoolYear, semester} = ctx.request.query
-  console.log(schoolYear)
-  console.log(semester)
   if(keyword) {
     // 查询输入的可能是教师姓名
     let teacherJobid = await teacherQuery({name: keyword}, [], ['jobid'], ['name'])
@@ -243,8 +241,7 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
   let {count} = await role_taskCountQuery(role)
 
   let schoolYearAndSemester = getSchoolYearAndSemester()
-  // ↓要每学期都来修改，目前两个地方都调用了getSchoolWeek(yyyy,mm,dd)，之后可以再封装一下
-  let nowWeek = getSchoolWeek(2021, 2, 24)  // 正常的该学期开学日期，不用改month
+  let nowWeek = getSchoolWeek()
 
   ctx.body = {
     submittedSheetNum: length,
@@ -471,7 +468,7 @@ router.get('/annualReport/:report_id', async (ctx, next) => {
 
 router.get('/getSchoolTime', async (ctx, next) => {
   let schoolYearAndSemester = getSchoolYearAndSemester()
-  let nowWeek = getSchoolWeek(2021, 2, 24)  // 正常的该学期开学日期，不用改month
+  let nowWeek = getSchoolWeek()
 
   ctx.body = {
     schoolYearList,
