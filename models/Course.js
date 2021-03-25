@@ -24,14 +24,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.FLOAT,
       allowNull: false,
     },
-    // teacher: {  // 教师
-    // },
-    // classroom: {  // 教室
-    // },
-    // week: { // 起止周
-    // },
-    // time: { // 周几+节次
-    // },
     setupUnit: { // 开课单位
       type: DataTypes.STRING(50),
       allowNull: false,

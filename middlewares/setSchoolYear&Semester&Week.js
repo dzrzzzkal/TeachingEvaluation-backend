@@ -1,5 +1,3 @@
-// 小程序端也有这个一样的代码文件('/utils/getSchoolYearAndSemester')，目前没确定通过哪个来确定schoolYear semester week
-
 // 根据当前日期，返回当前学年、学期、周数。
 const schoolYearList = ['2018-2019年', '2019-2020年', '2020-2021年', '2021-2022年', '2022-2023年', '2023-2024年', '2024-2025年']
 const semesterList = ['春季学期', '夏季学期', '秋季学期']
@@ -25,13 +23,8 @@ const setSchoolYearAndSemester = () => {
       return{
         schoolYearIndex: semesterIndex !== 0 ? i : i - 1,
         schoolYear: semesterIndex !== 0 ? schoolYearList[i] : schoolYearList[i - 1],
-        // thisSchoolYear: semesterIndex !== 0 ? schoolYearList[i] : schoolYearList[i - 1],
         semesterIndex: semesterIndex,
         semester: semesterList[semesterIndex],
-        // thisSemester: semesterList[semesterIndex],
-
-        // tempSchoolYearIndex: semesterIndex !== 0 ? i : i - 1, // 为了schoolYear&semester scroll显示当前选择的schoolYear&semester
-        // tempSemesterIndex: semesterIndex
       }
     }
   }
@@ -43,19 +36,16 @@ const setSchoolWeek = (date) => { // '2021-2-24'
   let month = parseInt(date.split('-')[1]) - 1  // setFullYear的month: 0-11，但是输入的month是正常日期的month，因此month-1
   let day = parseInt(date.split('-')[2])
   var d = new Date()
-  // d.setFullYear(d.getFullYear(),0,1);  // 定义变量d为当年的1月1日0点
   d.setFullYear(year, month, day)
   var weekday = d.getDay()  // 定义day为当年1月1日的星期数(0为星期天,1为星期1,6为星期6)
-  // 定义fistweekleft为第一周bai剩余的天数,此处认为星期一是一周的第一天，如果将星期天定义为一周的第一天，请写成fistweekleft = (6-day)%6
+  // 定义fistweekleft为第一周剩余的天数,此处认为星期一是一周的第一天，如果将星期天定义为一周的第一天，请写成fistweekleft = (6-day)%6
   var firstweekleft = (7-weekday)%7;
   // 将d赋值为第二周的第一天,1+fistweekleft号为第一周最后天，1+fistweekleft+1为第二周第一天
-  // d.setFullYear(d.getFullYear(),0,1+fistweekleft+1);
   d.setFullYear(year, month, day + firstweekleft + 1)
   // 定义变量d1为当天
   var d1 = new Date()
   // 当前时间与当年第二周第一天的毫秒数之差除以一周的毫秒数并取整即为当前日期距本的第二周已过的周数
   // 结果加上2即为当天为本年的第几周（如果在一周的第一天的0点运行此程序，结果会比实际值大1，此种情况请自行处理）
-  // console.log(2+parseInt((d1.getTime()-d.getTime())/1000/60/60/24/7));
   let nowWeek = 2+parseInt((d1.getTime()-d.getTime())/1000/60/60/24/7)
   if(nowWeek > 16) {
     nowWeek = 16

@@ -6,7 +6,6 @@ const bodyparser = require('koa-bodyparser')
 const logger = require('koa-logger')
 const render = require('koa-art-template')
 const path = require('path')
-// const static = require('koa-static') 这个koa-static是自己写的，下面的app.use(require('koa-static')(__dirname + '/public'))是系统自带的
 const staticCache = require('koa-static-cache')
 // const session = require('koa-session')
 const session = require('koa-session-minimal')
@@ -18,7 +17,7 @@ require('module-alias/register')
 
 const config = require('./config/config')
 const localFilter = require('./middlewares/localFilter')
-const {schoolYearList, semesterList, weekList, setSchoolYearAndSemester, getSchoolYearAndSemester, setSchoolWeek, getSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
+const {setSchoolYearAndSemester, setSchoolWeek} = require('@/middlewares/setSchoolYear&Semester&Week')
 
 const index = require('./routes/index')
 const api = require('./routes/api')
@@ -31,7 +30,7 @@ onerror(app)
 // 使用koa-bodyparser来解析提交的表单信息
 app.use(bodyparser({
   enableTypes:['json', 'form', 'text'],
-  // formLimit: '1mb'  //不知道是什么东西，看要不要删除！！！！！！
+  // formLimit: '1mb'
 }))
 app.use(json())
 app.use(logger())
@@ -54,52 +53,7 @@ global.schoolTime = {
   nowSchoolWeek: setSchoolWeek(semesterStartDate),
 }
 
-/**
-  // 配置koa-session的中间件
-  app.keys = ['some secret burr'] // cookie的签名
-  const CONFIG = {
-    key: 'koa:sess',  // cookie key (default koa:sess)
-    maxAge: 5000,  // cookie的过期时间 【需要修改】
-    overwrite: true,  // can overwrite or not (default true)
-    httpOnly: true, // cookie是否只有服务器端可以获取cookie (default true)
-    signed: true, // 签名 默认 true
-    rolling: true, // 在每次请求时强行设置cookie，这将重置cookie过期时间 (default false) 【这两个改一个】
-    renew: false, // renew session when session is nearly expired (default false) 【这两个改一个】
-    autoCommit: true,  // (boolean) automatically commit headers (default true)
-    secure: false, // (boolean) secure cookie true的话http不能访问
-    sameSite: null, // (string) session cookie sameSite options (default null, don't set it)
-  }
-  app.use(session(CONFIG, app))
-  */
-
-/**
- * MySQL
- * 使用koa-session-minimal``koa-mysql-session来进行数据库的操作
- */
-// session存储配置
-const sessionMysqlConfig = ({
-  database: config.database.DATABASE,
-  user: config.database.USERNAME,
-  password: config.database.PASSWORD,
-  host: config.database.HOST
-})
-//配置session(koa-session-minimal)中间件
-app.use(session({
-  key: 'USER_SID',
-  store: new MysqlStore(sessionMysqlConfig),
-  // cookie: {               // 与cookie相关的配置
-  //   domain: 'lcoalhost',  // 写cookie所在的域名
-  //   path: '/',            // 写cookie所在的路径
-  //   maxAge: 1000*300,     // cookie有效时长
-  //   httpOnly: true,       // 是否只用于http请求中获取
-  //   overwrite: false      //是否允许重写
-  // }
-}))
-
-
 // 配置koa2-cors中间件，跨域
-// 待详细配置，参考一下别人的：https://segmentfault.com/q/1010000019446949
-// https://blog.csdn.net/qq_34995576/article/details/85005668?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3.control&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3.control
 app.use(cors({
   origin: function (ctx) {
     // 待改
@@ -116,60 +70,28 @@ app.use(cors({
   allowHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
 }))
 
-// 写一个中间件配置公共的信息
-// app.use(async (ctx, next) => {
-//   ctx.state.userInfo = 'aaa'
-//   await next()  // 继续向下匹配路由
-// })
 
 // token拦截，验证
-/**
- * 根据localFilter有两种，
- * 第一种是token过期，只要有token(前台logout才会删除token)，直接更新token，无token的话就导向'/json'，
- * 第二种是token过期的话，都不能获取，要重新登录获取token（目前只有前台有登录功能）
- * 目前采用的是第一种，第二种不能删！！！
- * 
- * ————————————更新：
- * 发现问题，
- * 重复了，前端每次都要先对后端进行一次请求，判断token是否过期，
- * 而只要有路由请求，后端每次都会在这里先拦截，判断token是否过期，因此有时前后台都进行判断，影响性能。
- * -----但是暂时先保持这样，后面再看对哪个改进↑-----
- * （目前前端：会有auth的判断，然后看有无token，需要auth且有token则每次发送请求前会请求'/checkToken'这个URL，否则前端要先登录。
- * 目前后端：目前'/checkToken'中，思路和下面这个拦截器一模一样，因此采用的也是第一种，
- * 如果想改成第二种，可以修改 'localFilter.js'
- * 而即使目前此拦截器和'/checkToken'都会触发localFilter()，但是只会返回一个新的token，因为还没过期）
- */
 app.use(async (ctx, next) => {
   /**
    * res: token有效时返回'token valid'，
    * 过期时返回refreshToken(包括更新checkToken()结果，添加addToken()结果)，
    * 无token时直接return
    */
-  // 以下的代码包括localFIlter()全都写的好丑陋。。。好sb的逻辑TAT
-  // console.log('拦截前的ctx:')
-  // console.log(ctx.request)
   console.log('-----this is a token拦截中间件：')
   let res = await localFilter(ctx)
   ctx = res
   console.log('拦截后的ctx.response.body:')
   console.log(ctx.response.body)
   await next()
-  /**
-   * 第二种 ！！！不能删！！！！
-   */
-  // await localFilter(ctx)
-  // await next()
 })
 
 // 向微信请求、存储和定期更新access_token
 const storeAccessToken = require('./middlewares/storeAccessToken')
 storeAccessToken()
 
-
-
-// 404中间件（貌似可删）
+// 404中间件
 app.use(async (ctx, next) => {
-  // console.log('这是一个中间件')
   await next()
 
   if(ctx.status == 404) {

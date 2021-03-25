@@ -1,28 +1,18 @@
 const wxAPI = require('@/API/wxAPI')
 const {accessTokenQuery, accessTokenCreate, accessTokenUpdate} = require('@/controller/wxToken')
 
-// 这个请求是服务器单独向微信方请求的，如果请求失败怎样？，待设置
-// 要不要用async await，应该要吧，怕之后定时器会延迟
-// 看后面怎么用try catch
-
+// 服务器向微信方请求h
 async function getAT() {
   let res = await wxAPI.getAccessToken()
   let access_token = res.access_token
   if(!access_token) { // 请求没有获取到access_token
     console.log(res)
-
-    // 然后呢？先判断errCode，再一段时间再调用一次本函数？小心会不会有重复定时器
-
   } else {
     // 把access_token更新入数据库
     await accessTokenUpdate(access_token)
   }
 }
 
-
-/**
- * 真正上线时应该不用这么复杂，不用这么多ifelse，现在为了开发调试暂时这样
- */
 async function storeAccessToken() {
   const period = 7200000
 

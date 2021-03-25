@@ -1,11 +1,4 @@
-// const model = require('@/controller/model')
-// let User = model.User //获取User模型
 const {User} = require('@/models/index')
-
-/**
- * 这里的封装参考：
- * https://www.cnblogs.com/pzxnm/p/10500083.html
- */
 
 exports.userCreate = async (userinfo) => {
   let {user, pass, jobid} = userinfo
@@ -15,7 +8,6 @@ exports.userCreate = async (userinfo) => {
     jobid,
   })
 }
-
 
 // 查询用户名是否存在，用于注册验证   // 考虑要不要像上面一样，user(原本是data)=>userinfo
 exports.usernameQuery = async (user) => {

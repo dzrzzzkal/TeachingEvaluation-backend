@@ -1,12 +1,6 @@
 const officegen = require('officegen')
 const fs = require('fs')
 
-
-// https://www.cnblogs.com/liangyy/p/12466111.html
-// https://blog.csdn.net/lvye1221/article/details/90339712
-// https://www.npmjs.com/package/officegen
-// https://www.cnblogs.com/jackson-yqj/p/10329448.html 抛出接口
-
 const exportDocx = function(formData, fileName) {
   let {classification, 
     submitter_id, submitter, course_setupUnit, course_name, class_id, teacher_id, teacher_name, class_time, place, attend_num, actual_num, role, 
@@ -118,31 +112,16 @@ const exportDocx = function(formData, fileName) {
         opts: {
           align: "left",
           vAlign: "left",
-          // color: "A00000", 
           sz: '21',
-          // cellColWidth: 42,
           b: true,
-          // shd: {
-          //   fill: "7F7F7F",
-          //   themeFill: "text1",
-          //   "themeFillTint": "80"
-          // },
-          // fontFamily: "Avenir Book"
         }
       }]
     ]
     let environmentTableStyle = {
-      // tableColWidth: 2400,
       tableColWidth: 8000,
-      // tableSize: 24,
-      // tableColor: "ada",
-      // tableAlign: "center",
-      // tableVAlign: "center",
-      // tableFontFamily: "Comic Sans MS",
       borders: true
     }
     docx.createTable(environmentTable, environmentTableStyle)
-    // pObj.addLineBreak()
     pObj = docx.createP()
   }
   
@@ -274,22 +253,7 @@ const exportDocx = function(formData, fileName) {
     evaluationTable = evaluationTable_experiment
   }
   let evaluationTableStyle = {
-    // tableColWidth: 4261,
-    // // tableColWidth: 2000,
-    // tableSize: 24,
-    // tableColor: "ada",
-    // tableAlign: "left",
-    // tableFontFamily: "Comic Sans MS",
-    // spacingBefor: 120, // default is 100
-    // spacingAfter: 120, // default is 100
-    // spacingLine: 240, // default is 240
-    // spacingLineRule: 'atLeast', // default is atLeast
-    // indent: 100, // table indent, default is 0
-    // fixedLayout: true, // default is false
-    borders: true, // default is false. if true, default border size is 4
-    // borderSize: 2, // To use this option, the 'borders' must set as true, default is 4
-    // columns: [{ width: 900 }, { width: 1500 }, { width: 1500 }, { width: 20 }], // Table logical columns
-    // columns: [{align: "center"}, {align: "left"}, {align: "left"}, {align: "center"},]
+    borders: true
   }
   let theoryEvaluationContent = [
     ['教学态度', '教学认真，备课细致',  '向学生指出具体并对学习有指导性的目标；有教学内容提纲；对所下结论提供证据信息；结束时有总结。'],
@@ -452,8 +416,6 @@ const exportDocx = function(formData, fileName) {
       opts: {
         align: "left",
         vAlign: "left",
-        // sz: '21',
-        // cellColWidth: 42,
       }
     }], 
     [['给任课教师的具体建议：', concreteSuggestion]], 
@@ -467,13 +429,10 @@ const exportDocx = function(formData, fileName) {
 
   ]
   let overallEvaluationTableStyle = {
-    // tableColWidth: 2400,
     tableColWidth: 8000,
     tableSize: 6,
-    // tableColor: "ada",
     tableAlign: "left",
     tableVAlign: "left",
-    // tableFontFamily: "Comic Sans MS",
     borders: true
   }
   docx.createTable(overallEvaluationTable, overallEvaluationTableStyle)
@@ -508,19 +467,14 @@ const exportDocx = function(formData, fileName) {
         opts: {
           align: "left",
           vAlign: "left",
-          // sz: '21',
-          // cellColWidth: 42,
         }
       }], 
     ]
     let followUpDegreeTableStyle = {
-      // tableColWidth: 2400,
       tableColWidth: 8000,
       tableSize: 6,
-      // tableColor: "ada",
       tableAlign: "left",
       tableVAlign: "left",
-      // tableFontFamily: "Comic Sans MS",
       borders: true
     }
     docx.createTable(followUpDegreeTable, followUpDegreeTableStyle)
@@ -548,7 +502,6 @@ const exportDocx = function(formData, fileName) {
         opts: {
           align: "left",
           vAlign: "left",
-          // sz: '21',
           cellColWidth: 240,
         }
       }, {
@@ -556,7 +509,6 @@ const exportDocx = function(formData, fileName) {
         opts: {
           align: "left",
           vAlign: "left",
-          // sz: '21',
           cellColWidth: 1200,
         }
       }], 
@@ -566,25 +518,14 @@ const exportDocx = function(formData, fileName) {
     ]
     let followUpRecordTableStyle = {
       tableColWidth: 4000,
-      // tableColWidth: 8000,
       tableSize: 6,
-      // tableColor: "ada",
       tableAlign: "left",
       tableVAlign: "left",
-      // tableFontFamily: "Comic Sans MS",
       borders: true
     }
     docx.createTable(followUpRecordTable, followUpRecordTableStyle)
 
   }
-
-  
-
-  // We can even add images:
-  // pObj.addImage('some-image.png')
-
-  // Let's generate the Word document into a file:
-  // let out = fs.createWriteStream('C:\\Users\\Administrator\\Desktop\\evaluationSheet1.docx')
   let out = fs.createWriteStream('file/evaluationSheet/' + fileName)
 
   out.on('error', function(err) {

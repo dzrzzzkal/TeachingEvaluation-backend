@@ -125,18 +125,6 @@ function setWordData(formData) {
 }
 
 const exportEvaluationSheet = (formData, fileName) => {
-  // let {classification, 
-  //   submitter_id, submitter, course_setupUnit, course_name, class_id, teacher_id, teacher_name, class_time, place, attend_num, actual_num, role, 
-  //   environment, 
-  //   evaluationList, appreciateMethod, concreteSuggestion, familiarity, extension, followUp, otherSuggestion, participant, submit_time, 
-  //   followUpDegree, followUpParticipant, followUpParticipantSuggestion, followUpParticipantTime, 
-  //   followUpCollege, followUpCollegeSuggestion, followUpCollegeTime,
-  //   lecturer, lecturerRectification, lecturerTime,
-  //   followUpUnit, followUpUnitSuggestion, followUpUnitTime
-  // } = formData
-  // // 处理evaluationList为数组，其本身为字符串(例如:优-,良,不合格+)
-  // evaluationList = evaluationList.split(',')
-
   let sheetName
   switch (formData.classification) {
     case 'theory':

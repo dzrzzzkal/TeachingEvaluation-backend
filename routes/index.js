@@ -1,8 +1,5 @@
 const router = require('koa-router')()
 
-const common = require('../module/common')
-const userService = require('../controller/mysql')
-
 router.get('/', async (ctx, next) => {
   ctx.body = {
     "message": 'Teaching Evaluation Index Page.'

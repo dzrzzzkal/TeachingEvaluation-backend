@@ -7,11 +7,6 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true,
       autoIncrementIdentity: true,
     },
-    // sheet_id: {
-    //   type: DataTypes.STRING,
-    //   primaryKey: true, //PK
-    //   allowNull: false,
-    // },
     classification: { // 评估表类型
       type: DataTypes.STRING,
       allowNull: false,
@@ -24,9 +19,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(10),
       allowNull: false,
     },
-    // classification: {
-    //   type: DataTypes.STRING(50),
-    // },
     course_setupUnit: {
       type: DataTypes.STRING(50),
     },

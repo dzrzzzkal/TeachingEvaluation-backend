@@ -27,15 +27,7 @@ router.post('/checkToken', async (ctx, next) => {
 })
 
 // 微信小程序端获取微信用户登录凭证code
-/**
- * 参考的是这个：目前有地方没搞懂
- * 另，可能返回格式要改成JSON
- * https://blog.csdn.net/weixin_43419774/article/details/90545458
- */
 router.post('/doLogin', async (ctx, next) => {
-
-  // 下面的待封装出去
-
   var result  // 先将返回内容赋值给result，最后再赋值给ctx.response.body
 
   let {code, user, pass} = ctx.request.body
@@ -48,7 +40,6 @@ router.post('/doLogin', async (ctx, next) => {
   if(openid) {
     let openidRes = await openidQuery(openid)
       if(!openidRes) {  // 数据库中没有该openid，则先通过表user判断是否存在该用户user
-        // let userRes = await userQuery(loginUser)  // 通过表user查询该用户
         let userRes = await usernameQuery(user)
         if(!userRes) {  // 该用户名user不存在
           result = {
@@ -96,8 +87,6 @@ router.post('/doLogin', async (ctx, next) => {
        * 看后续怎么处理吧
        *  */ 
       else {  // 该openid存在。先通过user查询其对应的jobid，从而生成token，再查询和返回teacher的信息和返回token
-        // let user = openidRes.username // openidRes.jobid: 从查询openid返回的wxuser表中的结果获取jobid
-        // let userRes = await userQuery(loginUser)  // 通过表user查询该用户
         let userRes = await usernameQuery(user)
         if(!userRes) {
           result = {
@@ -260,8 +249,6 @@ router.get('/getEvaluationProgress', async (ctx, next) => {
 // 下载年度总结报告模板
 router.get('/downloadAnnualReportTemplate', async (ctx, next) => {
   let fileName = 'annualReportTemplate.docx'
-  // Set Content-Disposition to "attachment" to signal the client to prompt for download.
-  // Optionally specify the filename of the download.
   // 设置实体头（表示消息体的附加信息的头字段）,提示浏览器以文件下载的方式打开
   // 也可以直接设置 ctx.set("Content-disposition", "attachment; filename=" + fileName);
   ctx.attachment(fileName)
@@ -269,7 +256,6 @@ router.get('/downloadAnnualReportTemplate', async (ctx, next) => {
 })
 
 // 小程序页面“我的”中，点击“已评估”，查看评估记录列表（只含部分表内容）
-// 待改，目前页码和数量是固定的，小程序端处也还没做下拉加页码
 router.get('/getSubmittedSheetList', async (ctx, next) =>{
   let {jobid} = ctx.response.body
   let {keyword, page, size} = ctx.request.query

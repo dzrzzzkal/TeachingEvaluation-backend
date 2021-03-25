@@ -26,13 +26,6 @@ exports.classCreate = async (classinfo) => {
  * @param {array} fuzzySearchName 包含需要进行模糊搜索的对象的名称的数组，数组元素均为字符串string类型
  */
 exports.classQuery = async (query, filter, fuzzySearchName) => {
-  // let {teacher_name} = query
-  // // 如果输入的查询条件包含teacher_name，则设置为模糊查询，因为teacher_name以字符串形式xxx,yyy存储数组
-  // if(teacher_name) {  
-  //   teacher_name = {
-  //     [Op.like]: `%${teacher_name}%`  // 模糊查询
-  //   }
-  // }
   if(fuzzySearchName && fuzzySearchName.length) {
     for(let i in fuzzySearchName) {
       let attrName = fuzzySearchName[i]
@@ -67,8 +60,6 @@ exports.classQueryByTeacherName = async (teacher_name) => {
   })
 }
 
-// attributes待改，不返回那么多数据
-// 这里的where参考网址： https://www.javaroad.cn/questions/72608
 // 微信api中输入 班号/课程编号/教师名/课程名/课程开设单位，返回搜索到的对应的class和course的部分信息。
 exports.classQueryWithCourse = async (query) => {
   let {teacher_id, keyword, schoolYear, semester} = query
@@ -122,9 +113,6 @@ exports.classQueryByClassid = async (classid) =>{
       model: Course,
       // attributes: [],
     },
-    // {
-    //   model: Teacher,
-    // }
     ],
     where: {
       id: classid,

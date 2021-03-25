@@ -93,22 +93,6 @@ exports.teacherQuery = async (query, pagination, filter, fuzzySearchName, selfOR
     limit,
   })
 }
-// exports.teacherQuery = async (query, filter, fuzzySearchName) => {
-//   // if(fuzzySearchName) {
-//   if(fuzzySearchName && fuzzySearchName.length) {
-//     for(let i in fuzzySearchName) {
-//       let attrName = fuzzySearchName[i]
-//       let attrContent = query[attrName]
-//       query[attrName] = {
-//         [Op.like]: `%${attrContent}%`
-//       }
-//     }
-//   }
-//   return await Teacher.findAll({
-//     attributes: filter,
-//     where: query
-//   })
-// }
 
 // 根据工号jobid查询teacher的所有数据
 exports.teacherQueryByJobid = async (jobid) => {
@@ -119,7 +103,6 @@ exports.teacherQueryByJobid = async (jobid) => {
   })
 }
 
-// https://www.cnblogs.com/hss-blog/articles/10220267.html
 // 根据用户名user查询，返回用户名user 和 表teacher 中对应的具体信息
 exports.teacherInfoQuery = async (user) => {
   return await Teacher.findOne({

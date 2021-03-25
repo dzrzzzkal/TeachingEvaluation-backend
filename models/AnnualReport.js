@@ -7,11 +7,6 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true,
       autoIncrementIdentity: true,
     },
-    // sheet_id: {
-    //   type: DataTypes.STRING,
-    //   primaryKey: true, //PK
-    //   allowNull: false,
-    // },
     submitter_id: { // FK
       type: DataTypes.STRING(20),
       allowNull: false,
