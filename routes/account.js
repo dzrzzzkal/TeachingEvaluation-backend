@@ -5,7 +5,7 @@ const { userCreate, usernameQuery, userQuery } = require('@/controller/user')
 const {teacherQuery, teacherCreate, teacherInfoQuery} = require('@/controller/teacher')
 const {classCreate} = require('@/controller/class')
 const {courseCreate} = require('@/controller/course')
-const {evaluationSheetQuery, evaluationSheetUpdate, evaluationSheetQueryIfFinishedProgress} = require('@/controller/evaluationSheet')
+const {evaluationSheetQuery, evaluationSheetUpdate, evaluationSheetQueryIfFinishedProgress, ifFinishEvaluationProgress} = require('@/controller/evaluationSheet')
 const {role_taskCountQuery} = require('@/controller/role-taskCount')
 const {annualReportQuery} = require('@/controller/annualReport')
 
@@ -365,7 +365,8 @@ router.post('/evaluationProgress', async (ctx, next) => {
         }
         queryContent.push(queryItem)
       }
-      let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, '>=')
+      // let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, '>=')
+      let queryRes = await ifFinishEvaluationProgress(queryContent, schoolYear, '>=')
       allQueryableFinishedTeacher = queryRes
       for(let ft of allQueryableFinishedTeacher.rows) {
         let ftItem = ft
@@ -506,7 +507,8 @@ router.post('/evaluationProgress', async (ctx, next) => {
         }
         queryContent.push(queryItem)
       }
-      let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
+      // let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
+      let queryRes = await ifFinishEvaluationProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
       ep = queryRes
       for(let q of ep.rows) {
         let qItem = q
@@ -541,7 +543,8 @@ router.post('/evaluationProgress', async (ctx, next) => {
         }
         queryContent.push(queryItem)
       }
-      let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
+      // let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
+      let queryRes = await ifFinishEvaluationProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
       ep = queryRes
       for(let q of ep.rows) {
         let qItem = q
@@ -755,7 +758,8 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
       // console.log('queryContent: ')
       // console.log(queryContent)
       // var query = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, '<', 1, 10)
-      let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
+      // let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
+      let queryRes = await ifFinishEvaluationProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
       ep = queryRes
       for(let q of ep.rows) {
         let qItem = q
@@ -790,7 +794,8 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
         }
         queryContent.push(queryItem)
       }
-      let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
+      // let queryRes = await evaluationSheetQueryIfFinishedProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
+      let queryRes = await ifFinishEvaluationProgress(queryContent, schoolYear, rangeSymbol, currentPage, pageSize)
       ep = queryRes
       for(let q of ep.rows) {
         let qItem = q

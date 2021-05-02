@@ -33,6 +33,11 @@ Teacher.hasOne(User, { // 外键添加到目标 User 上
   // targetKey: 'jobid',
 })
 
+// 不知道要不要设这个，本人觉得应该Teacher hasOne Role-TaskCount，但是 Role_TaskCount上的外键只能关联Teacher上的主键，所以后来改了
+Teacher.belongsTo(Role_TaskCount, {
+  foreignKey: 'role' // Teacher中的'role'
+})
+
 // 外键添加到源 Class 上
 Class.belongsTo(Course, {
   foreignKey: 'course_id',
@@ -45,7 +50,10 @@ Class.belongsTo(Course, {
 // //  targetKey: 'jobid'
 // })
 
-EvaluationSheet.belongsTo(Teacher, {
+// EvaluationSheet.belongsTo(Teacher, {
+//   foreignKey: 'submitter_id'
+// })
+Teacher.hasMany(EvaluationSheet, { // FK 在 EvaluationSheet 上
   foreignKey: 'submitter_id'
 })
 
