@@ -827,7 +827,7 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
     ep = teacherinfo
     for(let i of ep.rows) {
       let item = i.dataValues
-      let {jobid, role} = item
+      let {jobid, role, dean} = item
       esQuery = {submitter_id: jobid, submit_time: schoolYear}
       esFilter = ['id']
       esFuzzySearchName = ['submit_time']
@@ -843,6 +843,15 @@ router.post('/exportEvaluationProgress', async (ctx, next) => {
         let tQueryRes = await evaluationSheetQuery(esQuery, esPagination, esFilter, esFuzzySearchName, esSelfORName, esGroupQuery)
         let beEvaluatedNum = tQueryRes.count
         item.beEvaluatedNum = beEvaluatedNum
+      }
+      if(dean === 'true') {
+        let arQ = {
+          submitter_id: jobid,
+          submit_time: schoolYear
+        }
+        let arFSN = ['submit_time']
+        let arQueryRes = await annualReportQuery(arQ, [], ['submitter_id'], arFSN)
+        item.aRSubmittedNum = arQueryRes.count
       }
     }
   }

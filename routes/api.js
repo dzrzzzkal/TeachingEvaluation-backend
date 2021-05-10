@@ -139,9 +139,11 @@ router.post('/doLogout', async (ctx, next) => {
 router.get('/getCourses', async (ctx, next) => {
   let {user, jobid} = ctx.body  // 获取用户名user、工号jobid
   let {schoolYear, semester} = ctx.request.query
-  let query = {teacher_name: user, schoolYear, semester}
+  // let query = {teacher_name: user, schoolYear, semester}
+  let query = {teacher_id: `${jobid},`, schoolYear, semester}
   let filter = {}
-  let fuzzySearchName = ['teacher_name']
+  // let fuzzySearchName = ['teacher_name']
+  let fuzzySearchName = ['teacher_id']
   let classRes = await classQuery(query, filter, fuzzySearchName)
 
   if(classRes.length) {
@@ -152,6 +154,7 @@ router.get('/getCourses', async (ctx, next) => {
       i.teacher_id = i.teacher_id.substr(0, i.teacher_id.length - 1)
     }
   }
+  console.log(classRes)
   
   ctx.body = classRes
 })

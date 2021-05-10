@@ -35,6 +35,7 @@ exports.classQuery = async (query, filter, fuzzySearchName) => {
       }
     }
   }
+  console.log(query)
   return await Class.findAll({
     include: [{
       model: Course,
